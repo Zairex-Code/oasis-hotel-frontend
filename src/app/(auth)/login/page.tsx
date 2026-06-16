@@ -70,19 +70,25 @@ export default function LoginPage(){
                 </CardHeader>
                 <CardContent>
                     <form action={handleLoginAction} className="space-y-4" >
+                        {errorMessage && (
+                            <div className= "p-3 text-sm text-red-500 bg-red-100 rounded-md">
+                                {errorMessage}
+                            </div>
+                        )}
                         <div className="space-y-2">
+                            <label htmlFor="email">Email</label>
                             <Input 
                             id="email"
                             name="email"
                             type="email"
-                            placeholder="youruser@oasishotel.com"
+                            placeholder="yourUser@oasishotel.com"
                             required
                             />        
 
                         </div>
 
-                        <div>
-                            <Label htmlFor="password">password</Label>
+                        <div className="space-y-2">
+                            <Label htmlFor="password">Password</Label>
                             <Input 
                                 id="password"
                                 name="password"
@@ -91,8 +97,8 @@ export default function LoginPage(){
                             />
 
                         </div>
-                        <Button type="submit" className="w-full">
-                            Sign In
+                        <Button type="submit" className="w-full" disabled={isLoading} >
+                            {isLoading ? "Signing in..." : "Sign In"}
                         </Button>
                         
                     </form>
