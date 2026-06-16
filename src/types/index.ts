@@ -58,7 +58,6 @@ export interface Hotel{
     imageUrl: string;
 }
 
-
 export interface Room {
     id: number;
     hotelId: number;
@@ -68,8 +67,9 @@ export interface Room {
     capacity: number;
     pricePerNight: number;
     roomStatus: RoomStatus;
-
 }
+
+
 
 // generic pagination structure that returns Spring Data JPA
 export interface PageableResponse<T>{
