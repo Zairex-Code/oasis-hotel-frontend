@@ -53,7 +53,7 @@ export interface Hotel{
     name: string;
     address: string;
     city: string;
-    starsRating: number;
+    stars: number;
     status: HotelStatus;
     imageUrl: string;
 }
@@ -62,7 +62,8 @@ export interface Hotel{
 export interface Room {
     id: number;
     hotelId: number;
-    roomNumber: String;
+    hotelName:string;
+    roomNumber: string;
     roomType: RoomType;
     capacity: number;
     pricePerNight: number;
