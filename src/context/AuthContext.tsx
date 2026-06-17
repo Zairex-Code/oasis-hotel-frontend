@@ -22,16 +22,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // This runs ONLY ONCE when the user opens the website
     useEffect(() => {
+        // We encapsulate the session restoration logic inside a separate function
+        const restoreSession = () => {
         const token = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
 
-        // If we find a saved session, we restore the user automatically
-        if (token && storedUser) {
-        setUser(JSON.parse(storedUser));
+        //  Check if storedUser exists and is not the literal string "undefined"
+        if (token && storedUser && storedUser !== "undefined") {
+            try {
+            setUser(JSON.parse(storedUser));
+            } catch (error) {
+            console.error("Corrupted user data in LocalStorage. Cleaning session.", error);
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            }
+        } else if (storedUser === "undefined") {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
         }
         
-        setIsLoading(false); // Finished loading
+        setIsLoading(false); // Finished loading data
+        };
+
+        // Defer execution to the next event loop tick using setTimeout.
+        // This breaks the synchronous chain and completely prevents cascading renders.
+        const timeoutId = setTimeout(restoreSession, 0);
+
+        // If the component unmounts unexpectedly, we cancel the timeout to prevent memory leaks. 
+        return () => clearTimeout(timeoutId);
     }, []);
+
 
     // Action to save the user when they successfully log in
     const login = (token: string, userData: User) => {
