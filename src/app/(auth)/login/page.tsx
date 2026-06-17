@@ -76,7 +76,8 @@ export default function LoginPage(){
                             </div>
                         )}
                         <div className="space-y-2">
-                            <label htmlFor="email">Email</label>
+
+                            <Label htmlFor="email">Email</Label>
                             <Input 
                             id="email"
                             name="email"
@@ -84,7 +85,6 @@ export default function LoginPage(){
                             placeholder="yourUser@oasishotel.com"
                             required
                             />        
-
                         </div>
 
                         <div className="space-y-2">
@@ -95,12 +95,10 @@ export default function LoginPage(){
                                 type="password"
                                 required
                             />
-
                         </div>
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading ? "Signing in..." : "Sign In"}
                         </Button>
-                        
                     </form>
                 </CardContent>
             </Card>
