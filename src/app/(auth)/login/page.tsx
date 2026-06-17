@@ -44,7 +44,7 @@ export default function LoginPage(){
 
 
 
-        } catch (error:any) {
+        } catch (error: any) {
             console.error("Login failed:", error);
             // Catch the 401 Unauthorized error from spring security
             setErrorMessage(
@@ -97,7 +97,7 @@ export default function LoginPage(){
                             />
 
                         </div>
-                        <Button type="submit" className="w-full" disabled={isLoading} >
+                        <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading ? "Signing in..." : "Sign In"}
                         </Button>
                         
