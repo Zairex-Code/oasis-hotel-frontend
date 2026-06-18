@@ -45,7 +45,7 @@ export default function DashboardLayout({
 
     // 3. Success! The user is verified. Render the sidebar, topbar, or the page itself (children)
     return (
-        <div className="min-h-screen bg-zinc-50">
+        <div className="flex min-h-screen bg-zinc-50">
             <Sidebar />
         {/* Future global components for the admin panel (like a Sidebar) will be placed here! */}
         <main>{children}</main>
