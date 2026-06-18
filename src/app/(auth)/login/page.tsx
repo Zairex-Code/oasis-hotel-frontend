@@ -33,6 +33,8 @@ export default function LoginPage(){
             const response = await api.post('/auth/login', {
                 email, password
             });
+
+            
             // Extract the data from Java's response
             const {token, user} = response.data;
 

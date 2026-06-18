@@ -55,7 +55,7 @@ export interface Hotel{
     city: string;
     stars: number;
     status: HotelStatus;
-    imageUrl: string;
+    imageUrl: string | null;
 }
 
 export interface Room {

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { Sidebar } from "@/components/Sidebar";
 
 export default function DashboardLayout({
     children,
@@ -45,6 +46,7 @@ export default function DashboardLayout({
     // 3. Success! The user is verified. Render the sidebar, topbar, or the page itself (children)
     return (
         <div className="min-h-screen bg-zinc-50">
+            <Sidebar />
         {/* Future global components for the admin panel (like a Sidebar) will be placed here! */}
         <main>{children}</main>
         </div>
