@@ -9,12 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-
-// 1. NUEVAS IMPORTACIONES: El Menú Desplegable y los nuevos íconos
-import { 
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, 
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Plus, MapPin, Star, Image as ImageIcon, MoreVertical, Edit, Power } from "lucide-react";
 
 export default function HotelsPage() {
@@ -22,8 +17,14 @@ export default function HotelsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Estados para CREAR
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  // 1. NUEVOS ESTADOS PARA EDITAR
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [hotelToEdit, setHotelToEdit] = useState<Hotel | null>(null); // Guarda el hotel seleccionado
 
   const fetchHotels = async () => {
     try {
@@ -52,6 +53,7 @@ export default function HotelsPage() {
     fetchHotels();
   }, []);
 
+  // Función para CREAR (POST)
   const handleCreateHotel = async (formData: FormData) => {
     setIsCreating(true);
     try {
@@ -74,17 +76,40 @@ export default function HotelsPage() {
     }
   };
 
-  // 2. NUEVA FUNCIÓN: Cambiar el estado del hotel (Activar/Desactivar)
+  // 2. NUEVA FUNCIÓN PARA ACTUALIZAR (PUT)
+  const handleUpdateHotel = async (formData: FormData) => {
+    if (!hotelToEdit) return; // Defensa: Si no hay hotel seleccionado, no hacemos nada
+    
+    setIsUpdating(true);
+    try {
+      // Usualmente el DTO de actualización en Java es similar al de creación
+      const updatedData = {
+        name: formData.get("name"),
+        address: formData.get("address"),
+        city: formData.get("city"),
+        stars: Number(formData.get("stars")),
+        imageUrl: formData.get("imageUrl") || null,
+      };
+
+      // Mandamos la petición a Java adjuntando el ID en la URL
+      await api.put(`/v1/api/hotels/${hotelToEdit.id}`, updatedData);
+      
+      setIsEditModalOpen(false);
+      setHotelToEdit(null); // Limpiamos la memoria
+      fetchHotels(); // Recargamos la lista para ver los cambios
+    } catch (err: any) {
+      console.error("Error updating hotel:", err);
+      alert(err.response?.data?.message || "Error al actualizar el hotel");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Función para CAMBIAR ESTADO (PUT / PATCH)
   const handleToggleStatus = async (hotelId: number, currentStatus: string) => {
     try {
-      // Invertimos el estado lógicamente
       const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      
-      // OJO: Esta URL depende de cómo la hayas configurado en tu HotelController de Java. 
-      // Generalmente es un PATCH o PUT. Suponiendo que tu DTO necesita un campo "status":
       await api.put(`/v1/api/hotels/${hotelId}/status`, { status: newStatus });
-      
-      // Si tuvo éxito, recargamos la lista para ver el nuevo color de la etiqueta
       fetchHotels();
     } catch (err: any) {
       console.error("Error al cambiar estado:", err);
@@ -92,9 +117,16 @@ export default function HotelsPage() {
     }
   };
 
+  // 3. Función que se dispara al hacer clic en "Editar" en el menú
+  const openEditModal = (hotel: Hotel) => {
+    setHotelToEdit(hotel); // Metemos el hotel a la memoria
+    setIsEditModalOpen(true); // Abrimos el modal
+  };
+
   return (
     <div className="p-8 space-y-6">
-      {/* Header & Dialog Trigger (Sin cambios aquí) */}
+      
+      {/* --- HEADER Y MODAL DE CREACIÓN --- */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Hotels</h1>
@@ -110,20 +142,60 @@ export default function HotelsPage() {
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
               <DialogTitle>Create New Hotel</DialogTitle>
-              <DialogDescription>Fill in the details to register a new branch in the system.</DialogDescription>
+              <DialogDescription>Fill in the details to register a new branch.</DialogDescription>
             </DialogHeader>
             <form action={handleCreateHotel} className="space-y-4 mt-4">
               <div className="space-y-2"><Label htmlFor="name">Hotel Name</Label><Input id="name" name="name" required /></div>
               <div className="space-y-2"><Label htmlFor="city">City</Label><Input id="city" name="city" required /></div>
               <div className="space-y-2"><Label htmlFor="address">Full Address</Label><Input id="address" name="address" required /></div>
               <div className="space-y-2"><Label htmlFor="stars">Stars (1-5)</Label><Input id="stars" name="stars" type="number" min="1" max="5" required /></div>
-              <div className="space-y-2"><Label htmlFor="imageUrl">Image URL (Optional)</Label><Input id="imageUrl" name="imageUrl" type="url" /></div>
-              <Button type="submit" className="w-full mt-6" disabled={isCreating}>{isCreating ? "Saving to database..." : "Save Hotel"}</Button>
+              <div className="space-y-2"><Label htmlFor="imageUrl">Image URL</Label><Input id="imageUrl" name="imageUrl" type="url" /></div>
+              <Button type="submit" className="w-full mt-6" disabled={isCreating}>{isCreating ? "Saving..." : "Save Hotel"}</Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
+      {/* --- 4. EL MODAL DE EDICIÓN (Escondido hasta que se activa) --- */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Hotel</DialogTitle>
+            <DialogDescription>Update the details of the selected branch.</DialogDescription>
+          </DialogHeader>
+          
+          {/* Usamos defaultValue para que los inputs nazcan con los datos viejos */}
+          {hotelToEdit && (
+            <form action={handleUpdateHotel} className="space-y-4 mt-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Hotel Name</Label>
+                <Input id="edit-name" name="name" defaultValue={hotelToEdit.name} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-city">City</Label>
+                <Input id="edit-city" name="city" defaultValue={hotelToEdit.city} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-address">Full Address</Label>
+                <Input id="edit-address" name="address" defaultValue={hotelToEdit.address} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-stars">Stars (1-5)</Label>
+                <Input id="edit-stars" name="stars" type="number" min="1" max="5" defaultValue={hotelToEdit.stars} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-imageUrl">Image URL</Label>
+                <Input id="edit-imageUrl" name="imageUrl" type="url" defaultValue={hotelToEdit.imageUrl || ''} />
+              </div>
+              <Button type="submit" className="w-full mt-6" disabled={isUpdating}>
+                {isUpdating ? "Updating database..." : "Save Changes"}
+              </Button>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* --- ESTADOS Y LISTA DE HOTELES --- */}
       {isLoading && <div className="py-12 text-center text-zinc-500 animate-pulse font-medium">Loading hotels from database...</div>}
       {error && <div className="p-4 text-sm text-red-500 bg-red-100 rounded-md border border-red-200">{error}</div>}
 
@@ -162,7 +234,7 @@ export default function HotelsPage() {
                       </div>
                     </div>
                     
-                    {/* 3. EL MENÚ DE 3 PUNTITOS (Kebab Menu) */}
+                    {/* EL MENÚ DE 3 PUNTITOS */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -173,11 +245,12 @@ export default function HotelsPage() {
                       <DropdownMenuContent align="end" className="w-40">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => alert("Pronto haremos la función de Editar!")}>
+                        
+                        {/* 5. AHORA EL BOTÓN DE EDITAR LLAMA A LA NUEVA FUNCIÓN */}
+                        <DropdownMenuItem onClick={() => openEditModal(hotel)}>
                           <Edit className="mr-2 h-4 w-4" /> Edit Hotel
                         </DropdownMenuItem>
                         
-                        {/* Botón de Cambiar Estado */}
                         <DropdownMenuItem 
                           onClick={() => handleToggleStatus(hotel.id, hotel.status)} 
                           className={hotel.status === 'ACTIVE' ? "text-red-600 focus:text-red-600" : "text-green-600 focus:text-green-600"}
