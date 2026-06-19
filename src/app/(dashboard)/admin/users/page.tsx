@@ -8,7 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, Plus, MoreHorizontal, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, MoreHorizontal, Edit, Trash2, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,167 +24,120 @@ export default function UsersPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [selectedRole, setSelectedRole] = useState("CUSTOMER");
 
-  // 🚀 1. PAGINATION STATES
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [totalElements, setTotalElements] = useState(0);
 
-  // 🚀 2. FETCH FUNCTION NOW ACCEPTS THE CURRENT PAGE
   const fetchUsers = async (pageToFetch: number = 0) => {
     try {
       setIsLoading(true);
-      setError(null);
-      
-      // Requesting the specific page from Spring Boot Data JPA (Size defaults to 10)
       const response = await api.get(`/users?page=${pageToFetch}`); 
-      
-      if (response.data) {
-        if (response.data.content && Array.isArray(response.data.content)) {
-          // If the response is a Spring Pageable Object
-          setUsers(response.data.content);
-          setTotalPages(response.data.totalPages || 1);
-          setTotalElements(response.data.totalElements || response.data.content.length);
-        } else if (Array.isArray(response.data)) {
-          // Fallback if Java sends a flat List instead of Pageable
-          setUsers(response.data);
-          setTotalPages(1);
-          setTotalElements(response.data.length);
-        }
+      if (response.data?.content) {
+        setUsers(response.data.content);
+        setTotalPages(response.data.totalPages || 1);
+        setTotalElements(response.data.totalElements || response.data.content.length);
       }
-    } catch (err: any) {
-      console.error("Error fetching users:", err);
-      setError("Could not load users from Spring Boot.");
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (err) { setError("Could not load identities."); } finally { setIsLoading(false); }
   };
 
-  // 🚀 3. TRIGGER FETCH WHEN CURRENT PAGE CHANGES
-  useEffect(() => {
-    fetchUsers(currentPage);
-  }, [currentPage]);
+  useEffect(() => { fetchUsers(currentPage); }, [currentPage]);
 
   const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); 
     setIsCreating(true);
     const formData = new FormData(e.currentTarget);
-    
     try {
-      const newUserPayload = {
-        firstName: formData.get("firstName"),
-        lastName: formData.get("lastName"),
-        email: formData.get("email"),
-        password: formData.get("password"),
-        role: selectedRole, 
+      const payload = {
+        firstName: formData.get("firstName"), lastName: formData.get("lastName"),
+        email: formData.get("email"), password: formData.get("password"), role: selectedRole, 
       };
-
-      await api.post("/users", newUserPayload);
-      
+      await api.post("/users", payload);
       setIsCreateModalOpen(false);
-      setSelectedRole("CUSTOMER");
-      fetchUsers(currentPage); // Refresh current page
+      fetchUsers(currentPage); 
     } catch (err: any) {
-      if (err.response?.data?.errors) {
-        const validationMap = err.response.data.errors;
-        const errorMessages = Object.entries(validationMap)
-          .map(([field, msg]) => `• ${field}: ${msg}`)
-          .join("\n");
-        alert(`Validation Failed:\n${errorMessages}`);
-      } else {
-        alert(err.response?.data?.detail || "Failed to register user rows inside the database.");
-      }
-    } finally {
-      setIsCreating(false);
-    }
-  };
-
-  // 🚀 4. PAGINATION HANDLERS
-  const handlePreviousPage = () => {
-    if (currentPage > 0) setCurrentPage(prev => prev - 1);
-  };
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages - 1) setCurrentPage(prev => prev + 1);
+      alert("Failed to inject user entity. Review backend logs.");
+    } finally { setIsCreating(false); }
   };
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="p-8 space-y-6 flex flex-col min-h-[calc(100vh-4rem)]">
+      {/* HEADER */}
+      <div className="flex items-center justify-between border-b border-border pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900">System Users</h1>
-          <p className="text-zinc-500">Manage administrators, receptionists, and clients.</p>
+          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
+             <Users className="w-8 h-8 text-primary" /> Identities
+          </h1>
+          <p className="text-muted-foreground font-medium text-sm mt-1">Manage global ecosystem access and roles.</p>
         </div>
         
         {currentUser?.role === 'ADMIN' && (
           <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
             <DialogTrigger asChild>
-              <Button className="flex items-center gap-2">
-                <Plus className="w-4 h-4" /> Add New User
+              <Button className="flex items-center gap-2 rounded-xl font-bold shadow-md shadow-primary/20">
+                <Plus className="w-4 h-4" /> Register Identity
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Register New User</DialogTitle>
-                <DialogDescription>Create a new identity for the Oasis Hotel platform.</DialogDescription>
+                <DialogTitle>Network Identity</DialogTitle>
+                <DialogDescription>Create a new profile bound to the RBAC engine.</DialogDescription>
               </DialogHeader>
               <form onSubmit={handleCreateUser} className="space-y-4 mt-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label htmlFor="firstName">First Name</Label><Input id="firstName" name="firstName" required minLength={3} maxLength={30} /></div>
-                  <div className="space-y-2"><Label htmlFor="lastName">Last Name</Label><Input id="lastName" name="lastName" required minLength={3} maxLength={30} /></div>
+                  <div className="space-y-1.5"><Label>First Name</Label><Input name="firstName" required className="rounded-xl" /></div>
+                  <div className="space-y-1.5"><Label>Last Name</Label><Input name="lastName" required className="rounded-xl" /></div>
                 </div>
-                <div className="space-y-2"><Label htmlFor="email">Email Address</Label><Input id="email" name="email" type="email" required maxLength={100} /></div>
-                <div className="space-y-2"><Label htmlFor="password">Temporary Password</Label><Input id="password" name="password" type="password" required minLength={6} maxLength={50} /></div>
-                <div className="space-y-2">
+                <div className="space-y-1.5"><Label>Email Coordinate</Label><Input name="email" type="email" required className="rounded-xl" /></div>
+                <div className="space-y-1.5"><Label>Temporary Password</Label><Input name="password" type="password" required className="rounded-xl" /></div>
+                <div className="space-y-1.5">
                   <Label>System Role</Label>
                   <Select value={selectedRole} onValueChange={setSelectedRole}>
-                    <SelectTrigger className="w-full"><SelectValue placeholder="Select a role" /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CUSTOMER">Customer (Client)</SelectItem>
-                      <SelectItem value="HOTEL_MANAGER">Hotel Manager</SelectItem>
-                      <SelectItem value="ADMIN">Administrator</SelectItem>
+                      <SelectItem value="CUSTOMER">Client (Customer)</SelectItem>
+                      <SelectItem value="HOTEL_MANAGER">Branch Manager</SelectItem>
+                      <SelectItem value="ADMIN">System Administrator</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <Button type="submit" className="w-full mt-6" disabled={isCreating}>{isCreating ? "Saving..." : "Create User"}</Button>
+                <Button type="submit" className="w-full mt-6 rounded-xl font-bold" disabled={isCreating}>{isCreating ? "Processing..." : "Generate Identity"}</Button>
               </form>
             </DialogContent>
           </Dialog>
         )}
       </div>
 
-      {isLoading && <div className="py-12 text-center text-zinc-500 animate-pulse">Loading users...</div>}
-      {error && <div className="p-4 text-sm text-red-500 bg-red-100 rounded-md border border-red-200">{error}</div>}
-
-      {!isLoading && !error && (
-        <div className="bg-white border rounded-lg shadow-sm overflow-hidden border-zinc-200">
-          <table className="w-full text-sm text-left whitespace-nowrap">
-            <thead className="bg-zinc-50 text-zinc-500 border-b border-zinc-200">
-              <tr>
-                <th className="px-6 py-4 font-medium">Full Name</th>
-                <th className="px-6 py-4 font-medium">Email Address</th>
-                <th className="px-6 py-4 font-medium">System Role</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200">
-              {Array.isArray(users) && users.length === 0 ? (
-                <tr><td colSpan={4} className="px-6 py-12 text-center text-zinc-500">No users found.</td></tr>
-              ) : (
-                Array.isArray(users) && users.map((user) => (
-                  <tr key={user.id} className="hover:bg-zinc-50 transition-colors">
+      {/* DATA TABLE WRAPPER */}
+      {isLoading ? (
+        <div className="py-12 text-center text-muted-foreground animate-pulse font-bold flex-1">Syncing identities...</div>
+      ) : (
+        <div className="flex-1 flex flex-col justify-between space-y-6">
+          <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+            <table className="w-full text-sm text-left whitespace-nowrap">
+              <thead className="bg-muted/40 text-muted-foreground border-b border-border">
+                <tr>
+                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-xs">Entity Profile</th>
+                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-xs">Email Identity</th>
+                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-xs">Security Clearance</th>
+                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-xs text-right">Commands</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {users.map((user) => (
+                  <tr key={user.id} className="hover:bg-accent/30 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold text-xs uppercase">
+                        <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 text-primary font-black text-xs uppercase border border-primary/20">
                           {user.firstName?.charAt(0)}{user.lastName?.charAt(0)}
                         </div>
-                        <span className="font-medium text-zinc-900">{user.firstName} {user.lastName}</span>
+                        <span className="font-bold text-foreground">{user.firstName} {user.lastName}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-zinc-500">{user.email}</td>
+                    <td className="px-6 py-4 text-muted-foreground font-medium">{user.email}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-semibold ${
-                        user.role === 'ADMIN' ? 'bg-purple-100 text-purple-800' : 
-                        user.role === 'HOTEL_MANAGER' ? 'bg-orange-100 text-orange-800' : 'bg-zinc-100 text-zinc-800'
+                      <span className={`inline-flex px-3 py-1 rounded-xl text-xs font-black border ${
+                        user.role === 'ADMIN' ? 'bg-chart-1/10 text-chart-1 border-chart-1/20' : 
+                        user.role === 'HOTEL_MANAGER' ? 'bg-chart-2/10 text-chart-2 border-chart-2/20' : 'bg-muted text-muted-foreground border-border'
                       }`}>
                         {user.role}
                       </span>
@@ -192,49 +145,30 @@ export default function UsersPage() {
                     <td className="px-6 py-4 text-right">
                       {currentUser?.role === 'ADMIN' && (
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0"><MoreHorizontal className="h-4 w-4 text-zinc-500" /></Button></DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>User Options</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => alert("Edit feature coming next!")}><Edit className="mr-2 h-4 w-4" /> Edit Details</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600 focus:text-red-600"><Trash2 className="mr-2 h-4 w-4" /> Suspend Account</DropdownMenuItem>
+                          <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0 rounded-xl"><MoreHorizontal className="h-4 w-4 text-muted-foreground" /></Button></DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl bg-card border-border">
+                            <DropdownMenuLabel>Scope Actions</DropdownMenuLabel>
+                            <DropdownMenuItem className="rounded-lg"><Edit className="mr-2 h-4 w-4" /> Edit Profile</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive focus:text-destructive rounded-lg"><Trash2 className="mr-2 h-4 w-4" /> Revoke Access</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       )}
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-
-          {/* 🚀 5. PAGINATION CONTROLS FOOTER */}
-          <div className="flex items-center justify-between px-6 py-3 bg-zinc-50 border-t border-zinc-200">
-            <span className="text-sm text-zinc-500">
-              Showing page <span className="font-medium text-zinc-900">{currentPage + 1}</span> of <span className="font-medium text-zinc-900">{totalPages}</span> 
-              {" "} ({totalElements} total records)
-            </span>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handlePreviousPage} 
-                disabled={currentPage === 0}
-                className="flex items-center gap-1"
-              >
-                <ChevronLeft className="w-4 h-4" /> Previous
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleNextPage} 
-                disabled={currentPage >= totalPages - 1}
-                className="flex items-center gap-1"
-              >
-                Next <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+                ))}
+              </tbody>
+            </table>
           </div>
 
+          <div className="flex items-center justify-between px-6 py-4 bg-card border rounded-2xl shadow-sm border-border mt-auto">
+            <span className="text-sm text-muted-foreground font-medium">
+              Page <span className="font-bold text-foreground">{currentPage + 1}</span> of <span className="font-bold text-foreground">{totalPages}</span> ({totalElements} total objects)
+            </span>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0} className="rounded-xl font-bold"><ChevronLeft className="w-4 h-4" /> Prev</Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages - 1} className="rounded-xl font-bold">Next <ChevronRight className="w-4 h-4" /></Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
