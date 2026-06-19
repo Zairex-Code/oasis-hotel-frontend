@@ -1,36 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { api } from "@/lib/api";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Users as UsersIcon, Bed, CalendarCheck, TrendingUp, LogOut } from "lucide-react";
+import { Building2, Users as UsersIcon, Bed, CalendarCheck, ShieldAlert, Activity, TrendingUp } from "lucide-react";
+
+// 🚀 1. IMPORTAMOS LOS NUEVOS COMPONENTES DE SHADCN CHART
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+
+// 🚀 2. DATOS SIMULADOS PARA EL GRÁFICO (Booking Velocity)
+const bookingTrendData = [
+  { month: "Jan", transactions: 120 },
+  { month: "Feb", transactions: 180 },
+  { month: "Mar", transactions: 240 },
+  { month: "Apr", transactions: 210 },
+  { month: "May", transactions: 350 },
+  { month: "Jun", transactions: 420 },
+  { month: "Jul", transactions: 510 },
+];
+
+// 🚀 3. CONFIGURACIÓN DEL GRÁFICO (Mapeado a tu paleta OKLCH)
+const chartConfig = {
+  transactions: {
+    label: "Reservations",
+    // Usamos el color primario de tu tema CSS
+    color: "hsl(var(--primary))", 
+  },
+} satisfies ChartConfig;
 
 export default function AdminDashboardPage() {
-    // Context authentication boundaries
-    const { user, logout, isLoading: authLoading } = useAuth();
-    const router = useRouter();
+    const { user, isLoading: authLoading } = useAuth();
 
-    // Analytic Metrics States
     const [metrics, setMetrics] = useState({
-        totalHotels: 0,
-        totalRooms: 0,
-        totalUsers: 0,
-        totalReservations: 0
+        totalHotels: 0, totalRooms: 0, totalUsers: 0, totalReservations: 0
     });
     const [isFetchingMetrics, setIsFetchingMetrics] = useState(true);
 
-    // Concurrently fetch aggregate data from Spring Boot pageable responses
     const fetchDashboardMetrics = async () => {
         try {
             setIsFetchingMetrics(true);
-            
-            // 🚀 ARCHITECTURAL FIX: We add a `.catch()` to every individual promise.
-            // If the backend doesn't have the endpoint yet (404), it silently returns an empty object 
-            // instead of crashing the entire Promise.all execution.
             const [hotelsRes, roomsRes, usersRes, reservationsRes] = await Promise.all([
                 api.get("/hotels?size=1").catch(() => ({ data: { totalElements: 0 } })),
                 api.get("/rooms?size=1").catch(() => ({ data: { totalElements: 0 } })),
@@ -39,10 +50,10 @@ export default function AdminDashboardPage() {
             ]);
 
             setMetrics({
-                totalHotels: hotelsRes.data?.totalElements || (Array.isArray(hotelsRes.data) ? hotelsRes.data.length : 0),
-                totalRooms: roomsRes.data?.totalElements || (Array.isArray(roomsRes.data) ? roomsRes.data.length : 0),
-                totalUsers: usersRes.data?.totalElements || (Array.isArray(usersRes.data) ? usersRes.data.length : 0),
-                totalReservations: reservationsRes.data?.totalElements || (Array.isArray(reservationsRes.data) ? reservationsRes.data.length : 0)
+                totalHotels: hotelsRes.data?.totalElements || 0,
+                totalRooms: roomsRes.data?.totalElements || 0,
+                totalUsers: usersRes.data?.totalElements || 0,
+                totalReservations: reservationsRes.data?.totalElements || 0
             });
         } catch (error) {
             console.error("Dashboard Analytics failed to synchronize:", error);
@@ -57,174 +68,169 @@ export default function AdminDashboardPage() {
         }
     }, [authLoading, user]);
 
-    // Handle security logout execution and cookie destruction
-    const handleSignOut = () => {
-        logout(); 
-        router.push('/login'); 
-    };
-
-    if (authLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[80vh]">
-                <p className="text-zinc-400 animate-pulse font-medium text-lg tracking-tight">Synchronizing secure session...</p>
-            </div>
-        );
-    }
+    if (authLoading) return null; 
 
     return (
-        <div className="p-8 space-y-8 animate-in fade-in duration-500">
+        <div className="p-8 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
             
-            {/* HEADER METRICS */}
-            <div className="flex items-start justify-between">
+            {/* HEADER */}
+            <div className="flex items-start justify-between border-b border-border pb-6">
                 <div className="space-y-1">
-                    <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
-                        Admin Command Center
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+                        <Activity className="w-8 h-8 text-primary" /> Command Center
                     </h1>
-                    <p className="text-zinc-500">
-                        Welcome back, <span className="font-semibold text-zinc-700">{user?.firstName}</span>. Here is the operational overview.
+                    <p className="text-muted-foreground font-medium text-sm">
+                        Workspace: authenticated as Operator <span className="font-bold text-foreground">{user?.firstName} {user?.lastName}</span>
                     </p>
                 </div>
-                
-                <Button variant="outline" onClick={handleSignOut} className="gap-2 text-zinc-600 hover:text-red-600 hover:bg-red-50 hover:border-red-200 transition-colors">
-                    <LogOut className="w-4 h-4" /> Secure Sign Out
-                </Button>
             </div>
 
-            {/* KEY PERFORMANCE INDICATORS (KPI CARDS) */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                
-                <Card className="border-l-4 border-l-blue-500 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-zinc-600">Total Branches</CardTitle>
-                        <Building2 className="w-4 h-4 text-blue-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            {isFetchingMetrics ? <span className="text-zinc-300 animate-pulse">--</span> : metrics.totalHotels}
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1">Active global hotel network</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-emerald-500 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-zinc-600">Room Inventory</CardTitle>
-                        <Bed className="w-4 h-4 text-emerald-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            {isFetchingMetrics ? <span className="text-zinc-300 animate-pulse">--</span> : metrics.totalRooms}
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1">Registered capacities across branches</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-purple-500 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-zinc-600">Network Identities</CardTitle>
-                        <UsersIcon className="w-4 h-4 text-purple-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            {isFetchingMetrics ? <span className="text-zinc-300 animate-pulse">--</span> : metrics.totalUsers}
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1">Customers, Staff, and Admins</p>
-                    </CardContent>
-                </Card>
-
-                <Card className="border-l-4 border-l-amber-500 shadow-sm">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                        <CardTitle className="text-sm font-medium text-zinc-600">Active Bookings</CardTitle>
-                        <CalendarCheck className="w-4 h-4 text-amber-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold text-zinc-900">
-                            {isFetchingMetrics ? <span className="text-zinc-300 animate-pulse">--</span> : metrics.totalReservations}
-                        </div>
-                        <p className="text-xs text-zinc-500 mt-1">Single room transaction ledgers</p>
-                    </CardContent>
-                </Card>
-
+            {/* KPI METRIC CARDS */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { title: "Hotels", val: metrics.totalHotels, icon: Building2, border: "border-l-chart-1" },
+                  { title: "Rooms", val: metrics.totalRooms, icon: Bed, border: "border-l-chart-2" },
+                  { title: "Identities", val: metrics.totalUsers, icon: UsersIcon, border: "border-l-chart-3" },
+                  { title: "Bookings", val: metrics.totalReservations, icon: CalendarCheck, border: "border-l-chart-5" }
+                ].map((kpi, idx) => (
+                    <Card key={idx} className={`border border-border border-l-4 ${kpi.border} bg-card rounded-2xl`}>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-xs font-black uppercase tracking-wider text-muted-foreground">{kpi.title}</CardTitle>
+                            <kpi.icon className="w-4 h-4 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-4xl font-black">
+                                {isFetchingMetrics ? <span className="text-muted-foreground/30 animate-pulse">--</span> : kpi.val}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
 
-            {/* IDENTITY METADATA SECTION */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card className="shadow-sm">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <ShieldCheckIcon className="w-5 h-5 text-zinc-400" />
-                            Authentication Clearance
+            {/* 📊 BOUTIQUE CHARTS SECTION */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                {/* 🚀 EL NUEVO GRÁFICO AREA CHART - GRADIENT DE RECHARTS/SHADCN */}
+                <Card className="lg:col-span-2 border border-border bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <CardHeader className="pb-0 border-b border-border/40 mb-4 bg-muted/10">
+                        <CardTitle className="text-lg font-black tracking-tight flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-chart-2" /> Booking Velocity Matrix
                         </CardTitle>
-                        <CardDescription>Verified JWT profile payload extracted from Spring Security.</CardDescription>
+                        <CardDescription className="text-sm font-medium text-muted-foreground">
+                            Aggregate reservation volume over the last 7 months.
+                        </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4 rounded-lg bg-zinc-50 p-5 border border-zinc-100">
-                            <div className="grid grid-cols-2 gap-y-4">
-                                <div>
-                                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Full Name</p>
-                                    <p className="text-base font-medium text-zinc-900 mt-0.5">{user?.firstName} {user?.lastName}</p>
+                    <CardContent className="flex-1 p-0 pb-4">
+                        <div className="h-[300px] w-full mt-4 pr-6">
+                            <ChartContainer config={chartConfig} className="h-full w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart
+                                        data={bookingTrendData}
+                                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                                    >
+                                        <defs>
+                                            {/* El gradiente fluido que cae hacia abajo */}
+                                            <linearGradient id="fillTransactions" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="var(--color-chart-1)" stopOpacity={0.5} />
+                                                <stop offset="95%" stopColor="var(--color-chart-1)" stopOpacity={0.01} />
+                                            </linearGradient>
+                                        </defs>
+
+                                        {/* Líneas de cuadrícula horizontales y sutiles */}
+                                        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/60" />
+                                        
+                                        <XAxis
+                                            dataKey="month"
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={12}
+                                            className="text-[10px] font-bold fill-muted-foreground"
+                                        />
+                                        <YAxis
+                                            tickLine={false}
+                                            axisLine={false}
+                                            tickMargin={10}
+                                            className="text-[10px] font-bold fill-muted-foreground"
+                                        />
+
+                                        {/* Tooltip interactivo al hacer hover */}
+                                        <ChartTooltip
+                                            cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '4 4' }}
+                                            content={<ChartTooltipContent indicator="line" className="bg-card border-border shadow-xl rounded-xl font-bold" />}
+                                        />
+                                        
+                                        {/* El área con curva 'monotone' (suave) */}
+                                        <Area
+                                            dataKey="transactions"
+                                            type="monotone"
+                                            fill="url(#fillTransactions)"
+                                            fillOpacity={1}
+                                            stroke="var(--color-chart-1)"
+                                            strokeWidth={3}
+                                            activeDot={{ r: 6, fill: "var(--color-background)", stroke: "var(--color-chart-1)", strokeWidth: 2 }}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </ChartContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* CAPACITY DENSITY BARS (SIDE PANEL) */}
+                <Card className="border border-border bg-card rounded-2xl shadow-sm">
+                    <CardHeader className="border-b border-border bg-muted/20">
+                        <CardTitle className="text-lg font-black flex items-center gap-2"><Bed className="w-5 h-5 text-chart-4" /> Capacity Density</CardTitle>
+                        <CardDescription className="text-xs font-medium text-muted-foreground">Inventory distribution metrics.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                        {[
+                          { name: "Single Suites", pct: "65%", color: "bg-chart-1" },
+                          { name: "Double Rooms", pct: "40%", color: "bg-chart-2" },
+                          { name: "Presidential Vaults", pct: "15%", color: "bg-chart-3" },
+                        ].map((bar, i) => (
+                            <div key={i} className="space-y-2">
+                                <div className="flex justify-between text-xs font-black uppercase tracking-wider">
+                                    <span className="text-foreground">{bar.name}</span>
+                                    <span className="text-muted-foreground">{bar.pct}</span>
                                 </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Email Identity</p>
-                                    <p className="text-base font-medium text-zinc-900 mt-0.5 truncate pr-4">{user?.email}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Database ID</p>
-                                    <p className="text-base font-mono text-zinc-700 mt-0.5">USR_{user?.id}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Authorization Role</p>
-                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold mt-1.5 ${
-                                        user?.role === 'ADMIN' ? 'bg-purple-100 text-purple-800 border border-purple-200' : 'bg-blue-100 text-blue-800 border border-blue-200'
-                                    }`}>
-                                        {user?.role}
-                                    </span>
+                                <div className="w-full h-3 bg-muted rounded-full overflow-hidden border border-border/50 shadow-inner">
+                                    <div className={`h-full ${bar.color} rounded-full transition-all duration-[1.5s] ease-out`} style={{ width: bar.pct }}></div>
                                 </div>
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card className="shadow-sm bg-zinc-900 text-zinc-100 border-zinc-800">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-zinc-100">
-                            <TrendingUp className="w-5 h-5 text-emerald-400" />
-                            System Health
-                        </CardTitle>
-                        <CardDescription className="text-zinc-400">API Gateway latency and infrastructure status.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50">
-                            <span className="text-sm text-zinc-300">Spring Boot Backend</span>
-                            <span className="flex items-center gap-2 text-xs font-medium text-emerald-400">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50">
-                            <span className="text-sm text-zinc-300">MySQL Database</span>
-                            <span className="flex items-center gap-2 text-xs font-medium text-emerald-400">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> CONNECTED
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between p-3 rounded bg-zinc-800/50">
-                            <span className="text-sm text-zinc-300">Next.js Client Engine</span>
-                            <span className="flex items-center gap-2 text-xs font-medium text-emerald-400">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400"></span> SYNCHRONIZED
-                            </span>
-                        </div>
+                        ))}
                     </CardContent>
                 </Card>
             </div>
-        </div>
-    );
-}
 
-// Quick helper icon component to avoid importing another library package
-function ShieldCheckIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10" />
-        <path d="m9 12 2 2 4-4" />
-        </svg>
+            {/* SECURITY METADATA CARD */}
+            <Card className="border border-border bg-card rounded-2xl shadow-sm overflow-hidden mt-10">
+                <div className="border-l-4 border-l-primary flex flex-col md:flex-row md:items-center">
+                    <div className="p-6 md:w-1/3 bg-muted/20 h-full border-r border-border/40">
+                        <h3 className="text-lg font-black flex items-center gap-2"><ShieldAlert className="w-5 h-5 text-primary" /> Security Clearance</h3>
+                        <p className="text-xs text-muted-foreground mt-2 font-medium leading-relaxed">Decoded JWT profile scope metadata mapping from the Spring Security engine.</p>
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-6 flex-1 bg-background">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Ecosystem Principal</p>
+                            <p className="text-sm font-bold text-foreground">{user?.firstName} {user?.lastName}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Mail Routing</p>
+                            <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Coordinate</p>
+                            <p className="text-sm font-mono text-primary font-bold">USR_IDX_{user?.id}</p>
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">RBAC Group</p>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-black bg-primary/10 text-primary border border-primary/20 mt-1">
+                                {user?.role}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        </div>
     );
 }
