@@ -70,6 +70,25 @@ export interface Room {
     hotelName: string; // The backend conveniently provides this!
 }
 
+// Agrega esto al final de src/types/index.ts
+export interface Reservation {
+    id: number;
+    userId: number;
+    userFirstName: string;
+    userLastName: string;
+    userEmail: string;
+    hotelId: number;
+    hotelName: string;
+    roomId: number;
+    roomNumber: string;
+    roomType: RoomType;
+    checkInDate: string; // ISO Date String
+    checkOutDate: string; // ISO Date String
+    numberOfGuests: number;
+    totalPrice: number;
+    status: ReservationStatus;
+    createdAt: string;
+}
 
 
 // generic pagination structure that returns Spring Data JPA

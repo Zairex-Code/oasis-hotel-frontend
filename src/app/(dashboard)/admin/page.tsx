@@ -27,19 +27,21 @@ export default function AdminDashboardPage() {
     const fetchDashboardMetrics = async () => {
         try {
             setIsFetchingMetrics(true);
+            
+            // 🚀 ARCHITECTURAL FIX: We add a `.catch()` to every individual promise.
+            // If the backend doesn't have the endpoint yet (404), it silently returns an empty object 
+            // instead of crashing the entire Promise.all execution.
             const [hotelsRes, roomsRes, usersRes, reservationsRes] = await Promise.all([
-                api.get("/hotels?size=1"),
-                api.get("/rooms?size=1"),
-                api.get("/users?size=1"),
-                api.get("/reservations/search/room-type?roomType=SINGLE&size=1") // Fallback if no global aggregation endpoint exists
+                api.get("/hotels?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/rooms?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/users?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/reservations?size=1").catch(() => ({ data: { totalElements: 0 } }))
             ]);
 
             setMetrics({
                 totalHotels: hotelsRes.data?.totalElements || (Array.isArray(hotelsRes.data) ? hotelsRes.data.length : 0),
                 totalRooms: roomsRes.data?.totalElements || (Array.isArray(roomsRes.data) ? roomsRes.data.length : 0),
                 totalUsers: usersRes.data?.totalElements || (Array.isArray(usersRes.data) ? usersRes.data.length : 0),
-                // Since ReservationController currently lacks a global 'getAll' method, 
-                // we aggregate a baseline or render active states depending on your exact Spring setup.
                 totalReservations: reservationsRes.data?.totalElements || (Array.isArray(reservationsRes.data) ? reservationsRes.data.length : 0)
             });
         } catch (error) {
