@@ -11,29 +11,22 @@ export const api= axios.create({
 
 api.interceptors.request.use(
     (config) => {
-        // Obtenemos el token. (Asegúrate de que 'token' sea el nombre exacto que usaste en tu AuthContext)
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-        // 🕵️‍♂️ ESPÍAS DE SEGURIDAD PARA LA CONSOLA (F12)
         console.log(`🚀 [AXIOS] Enviando petición: ${config.method?.toUpperCase()} ${config.url}`);
         console.log(`🔑 [AXIOS] ¿Hay token en localStorage?:`, token ? "✅ SÍ" : "❌ NULO");
 
-        if (token) {
-            // Limpiamos el token quitándole cualquier comilla doble residual 
-            // que a veces se cuela al usar JSON.stringify()
+        // 👇 CORRECCIÓN: Validamos que el token exista y NO sea la palabra "undefined" o "null"
+        if (token && token !== 'undefined' && token !== 'null') {
             const cleanToken = token.replace(/"/g, ''); 
-            
-            // Inyectamos el pase VIP
             config.headers.Authorization = `Bearer ${cleanToken}`;
+        } else {
+            console.log("⚠️ [AXIOS] Token inválido o ausente. La petición viajará sin cabecera de autenticación.");
         }
 
         return config;
     },
-
-    
     (error) => {
-        // if something goes wrong before sending the request,reject it
         return Promise.reject(error);
     }
-    
 );
