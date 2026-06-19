@@ -20,56 +20,61 @@ export function Sidebar() {
     const authorizedNavItems = navItems.filter(item => user && item.allowedRoles.includes(user.role));
 
     return (
-        <div className="flex flex-col w-64 h-screen px-4 py-8 bg-sidebar border-r border-sidebar-border transition-colors duration-500">
+        /* 🚀 HOVER EXPANSION ENGINE: Base width is w-20 (Icons only). On hover, it expands smoothly to w-64 */
+        <div className="flex flex-col w-20 hover:w-64 h-screen px-4 py-8 bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out group z-30 shrink-0 select-none">
             
             {/* BRAND HEADER */}
-            <div className="flex items-center gap-2 px-2 mb-2">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground p-1.5 rounded-lg">
-                    <Sparkles className="w-5 h-5" />
+            <div className="flex items-center gap-3 px-2 mb-2 overflow-hidden whitespace-nowrap">
+                <div className="bg-sidebar-primary text-sidebar-primary-foreground p-2 rounded-xl shrink-0">
+                    <Sparkles className="w-4 h-4" />
                 </div>
-                <h2 className="text-2xl font-black tracking-tight text-sidebar-foreground">
+                {/* 🚀 group-hover:opacity-100 makes text fade in beautifully when sidebar expands */}
+                <h2 className="text-xl font-black tracking-tighter text-sidebar-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-in">
                     Oasis
                 </h2>
             </div>
             
             {/* DYNAMIC ROLE BADGE */}
-            <p className="px-2 mb-8 text-xs font-bold text-sidebar-primary uppercase tracking-widest">
-                {user?.role || "Workspace"}
-            </p>
+            <div className="h-4 mb-8 px-2 overflow-hidden whitespace-nowrap">
+                <p className="text-[10px] font-black text-sidebar-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {user?.role || "Workspace"}
+                </p>
+            </div>
 
             {/* NAVIGATION LINKS */}
-            <nav className="flex-col flex-1 space-y-1.5">
+            <nav className="flex flex-col flex-1 space-y-2">
                 {authorizedNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                         <Link
                             key={item.name}
                             href={item.href}
-                            className={`flex items-center px-3 py-3 text-sm font-bold rounded-xl transition-all duration-200 group ${
+                            className={`flex items-center h-12 px-3 rounded-xl font-bold transition-all duration-200 overflow-hidden whitespace-nowrap ${
                                 isActive
-                                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md shadow-sidebar-primary/20" 
-                                : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/10" 
+                                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                             }`}
                         >
-                            <item.icon
-                                className={`mr-3 w-5 h-5 ${
-                                isActive ? "text-sidebar-primary-foreground" : "text-sidebar-foreground/60 group-hover:text-sidebar-accent-foreground"
-                                }`}
-                            />
-                            {item.name}
+                            <item.icon className="w-5 h-5 shrink-0" />
+                            {/* Text labels fade out when sidebar is collapsed */}
+                            <span className="ml-4 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                {item.name}
+                            </span>
                         </Link>
                     );
                 })}
             </nav>
 
             {/* LOGOUT ACTION */}
-            <div className="pt-4 mt-auto border-t border-sidebar-border">
+            <div className="pt-4 border-t border-sidebar-border overflow-hidden whitespace-nowrap">
                 <button
                     onClick={logout}
-                    className="flex items-center w-full px-3 py-3 text-sm font-bold text-destructive transition-colors rounded-xl hover:bg-destructive/10 group"
+                    className="flex items-center h-12 w-full px-3 text-destructive transition-colors rounded-xl hover:bg-destructive/10"
                 >
-                    <LogOut className="w-5 h-5 mr-3 text-destructive/70 group-hover:text-destructive" />
-                    Secure Sign Out
+                    <LogOut className="w-5 h-5 shrink-0" />
+                    <span className="ml-4 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        Sign Out
+                    </span>
                 </button>
             </div>
             
