@@ -34,9 +34,11 @@ export default function LoginPage(){
                 email, password
             });
 
+            console.log("Respuesta exacta de Java:", response.data);
+
             
             // Extract the data from Java's response
-            const {token, user} = response.data;
+            const {jwt: token, user} = response.data;
 
             // save it  securely in our Goal context and LocalStorage
             login(token, user);
