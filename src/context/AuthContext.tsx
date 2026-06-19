@@ -1,96 +1,89 @@
-"use client"; // CRITICAL: This tells Next.js this file runs in the browser, not the server
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User } from '../types'; // We bring our User interface from Step 3
+import { createContext, useContext, useEffect, useState } from "react";
+import { User } from "@/types";
 
-// 1. Define the shape of our "safe box" (What information it holds)
 interface AuthContextType {
-    user: User | null;
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    login: (token: string, userData: User) => void;
-    logout: () => void;
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
+  isDarkMode: boolean; // 🚀 Dark Mode State
+  login: (token: string, userData: User) => void;
+  logout: () => void;
+  toggleDarkMode: () => void; // 🚀 Toggle Controller
 }
 
-// 2. Create the empty Context (The actual safe box)
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// 3. Create the Provider (The manager that controls the safe box)
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-    // This runs ONLY ONCE when the user opens the website
-    useEffect(() => {
-        // We encapsulate the session restoration logic inside a separate function
-        const restoreSession = () => {
-        const token = localStorage.getItem('token');
-        const storedUser = localStorage.getItem('user');
-
-        //  Check if storedUser exists and is not the literal string "undefined"
-        if (token && storedUser && storedUser !== "undefined") {
-            try {
-            setUser(JSON.parse(storedUser));
-            } catch (error) {
-            console.error("Corrupted user data in LocalStorage. Cleaning session.", error);
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            }
-        } else if (storedUser === "undefined") {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-        }
-        
-        setIsLoading(false); // Finished loading data
-        };
-
-        // Defer execution to the next event loop tick using setTimeout.
-        // This breaks the synchronous chain and completely prevents cascading renders.
-        const timeoutId = setTimeout(restoreSession, 0);
-
-        // If the component unmounts unexpectedly, we cancel the timeout to prevent memory leaks. 
-        return () => clearTimeout(timeoutId);
-    }, []);
-
-
-    // Action to save the user when they successfully log in
-    const login = (token: string, userData: User) => {
-        // 1. Persist in LocalStorage for client-side state and Axios instance
-        localStorage.setItem('token', token);
-        localStorage.setItem('user', JSON.stringify(userData));
-        
-        // 2. Persist in a secure cookie for server-side Middleware validation (1-day expiration)
-        document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Strict`;
-        
-        setUser(userData);
-    };
-
-    // Action to clear everything when they log out
-    const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Clear the session cookie by forcing expiration
-        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Strict";
-        
-        setUser(null);
-    };
-
-    // We provide the data and actions to the rest of the app
-    return (
-        <AuthContext.Provider value={{ user, isAuthenticated: !!user, isLoading, login, logout }}>
-        {children}
-        </AuthContext.Provider>
-    );
-};
-
-// 4. Custom Hook: A shortcut to access the safe box from any screen
-export const useAuth = () => {
-    const context = useContext(AuthContext);
+  useEffect(() => {
+    // 1. Initial Session Synchronization
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
     
-    if (context === undefined) {
-        throw new Error('useAuth must be used within an AuthProvider');
+    // 2. Theme Synchronization Layer (Persists dark mode across reloads)
+    const savedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    
+    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+      setIsDarkMode(true);
+      document.documentElement.classList.add("dark");
+    } else {
+      setIsDarkMode(false);
+      document.documentElement.classList.remove("dark");
     }
+
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = (newToken: string, userData: User) => {
+    localStorage.setItem("token", newToken);
+    localStorage.setItem("user", JSON.stringify(userData));
+    document.cookie = `token=${newToken}; path=/; max-age=86400; SameSite=Strict`;
     
-    return context;
-};
+    setToken(newToken);
+    setUser(userData);
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+    setToken(null);
+    setUser(null);
+  };
+
+  // 🚀 3. THEME ALTERNATION LOGIC
+  const toggleDarkMode = () => {
+    if (isDarkMode) {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+      setIsDarkMode(false);
+    } else {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+      setIsDarkMode(true);
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, isLoading, isDarkMode, login, logout, toggleDarkMode }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be executed within an AuthProvider setup.");
+  return context;
+}
