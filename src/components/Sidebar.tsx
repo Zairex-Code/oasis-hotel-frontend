@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 // We import modern icons from lucide-react
-import { LayoutDashboard, Building2, Users, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Building2, Users, Settings, LogOut, Bed, Calendar } from "lucide-react";
 
 export function Sidebar() {
     const pathname = usePathname(); // Tells us exactly which URL the user is on right now
@@ -14,6 +14,8 @@ export function Sidebar() {
     const navItems = [
         { name: "Dashboard", href: "/admin", icon: LayoutDashboard },
         { name: "Hotels", href: "/admin/hotels", icon: Building2 },
+        { name: "Rooms", href: "/admin/rooms", icon: Bed },
+        { name: "Reservations", href: "/admin/reservations", icon: Calendar },
         { name: "Users", href: "/admin/users", icon: Users },
         { name: "Settings", href: "/admin/settings", icon: Settings },
     ];
