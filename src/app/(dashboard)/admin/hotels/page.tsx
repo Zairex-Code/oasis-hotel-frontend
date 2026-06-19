@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Plus, MapPin, Star, Image as ImageIcon, MoreVertical, Edit, Power, ChevronLeft, ChevronRight, Search, Building2 } from "lucide-react";
+import { Plus, MapPin, Star, Image as ImageIcon, MoreVertical, Edit, Power, ChevronLeft, ChevronRight, Search, Building2, Filter } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function HotelsPage() {
   const { user } = useAuth();
@@ -20,7 +21,7 @@ export default function HotelsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Form modals state
+  // Form modals state logic
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -35,8 +36,9 @@ export default function HotelsPage() {
   // 🚀 INTERACTIVE FILTER INPUT STATES
   const [filterName, setFilterName] = useState("");
   const [filterCity, setFilterCity] = useState("");
+  const [filterStatus, setFilterStatus] = useState("ALL"); // 🚀 The requested Status Filter!
 
-  // Sync with Spring Boot endpoints based on active filters
+  // Synchronize with database endpoints contextually
   const fetchHotels = async (pageToFetch: number = 0) => {
     try {
       setIsLoading(true);
@@ -44,7 +46,7 @@ export default function HotelsPage() {
       
       let endpoint = `/hotels?page=${pageToFetch}`;
       
-      // 🚀 ADVANCED ROUTING: Switch endpoints if the user is typing in the filter boxes
+      // ADVANCED ROUTING SWITCH: If user writes filters, fetch directly from your dedicated Java search endpoints!
       if (filterName.trim() !== "") {
         endpoint = `/hotels/search/name?name=${encodeURIComponent(filterName)}&page=${pageToFetch}`;
       } else if (filterCity.trim() !== "") {
@@ -55,9 +57,16 @@ export default function HotelsPage() {
       
       if (response.data) {
         if (response.data.content && Array.isArray(response.data.content)) {
-          setHotels(response.data.content);
+          let loaded = response.data.content;
+          
+          // 🚀 CLIENT-SIDE FILTER FALLBACK: Filter by status instantly without hitting the DB again
+          if (filterStatus !== "ALL") {
+            loaded = loaded.filter((h: Hotel) => h.status === filterStatus);
+          }
+          
+          setHotels(loaded);
           setTotalPages(response.data.totalPages || 1);
-          setTotalElements(response.data.totalElements || response.data.content.length);
+          setTotalElements(response.data.totalElements || loaded.length);
         }
       }
     } catch (err: any) {
@@ -68,16 +77,13 @@ export default function HotelsPage() {
     }
   };
 
-  // Re-fetch automatically when page or filters change
   useEffect(() => {
-    // Adding a small debounce logic could be done here, but for now strict effect dependency works
     const timer = setTimeout(() => {
         fetchHotels(currentPage);
     }, 300); // 300ms debounce to avoid spamming the backend while typing
     return () => clearTimeout(timer);
-  }, [currentPage, filterName, filterCity]);
+  }, [currentPage, filterName, filterCity, filterStatus]);
 
-  // MUTATIONS (Create / Update / Status)
   const handleCreateHotel = async (formData: FormData) => {
     setIsCreating(true);
     try {
@@ -153,24 +159,27 @@ export default function HotelsPage() {
       </div>
 
       {/* 🚀 THE INTERACTIVE FILTER CONTROLLER TOOLBAR */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-5 rounded-2xl bg-card border border-border shadow-sm">
-        <div className="space-y-2">
-          <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1.5 tracking-wider"><Search className="w-3.5 h-3.5 text-primary" /> Search by Name</Label>
-          <Input 
-            placeholder="e.g. Oasis Premium Resort..." 
-            value={filterName} 
-            onChange={(e) => { setFilterCity(""); setFilterName(e.target.value); setCurrentPage(0); }} 
-            className="rounded-xl bg-background border-border shadow-inner text-sm h-11" 
-          />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-card border border-border/80 shadow-sm">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1"><Search className="w-3 h-3 text-primary" /> Filter by Name</Label>
+          <Input placeholder="Search string (e.g. Oasis Premium)..." value={filterName} onChange={(e) => { setFilterCity(""); setFilterName(e.target.value); setCurrentPage(0); }} className="rounded-xl bg-background border-border/50 text-sm" />
         </div>
-        <div className="space-y-2">
-          <Label className="text-xs font-black text-muted-foreground uppercase flex items-center gap-1.5 tracking-wider"><MapPin className="w-3.5 h-3.5 text-chart-2" /> Lookup by City</Label>
-          <Input 
-            placeholder="e.g. Miami..." 
-            value={filterCity} 
-            onChange={(e) => { setFilterName(""); setFilterCity(e.target.value); setCurrentPage(0); }} 
-            className="rounded-xl bg-background border-border shadow-inner text-sm h-11" 
-          />
+        <div className="space-y-1.5">
+          <Label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1"><MapPin className="w-3 h-3 text-chart-2" /> Lookup by City</Label>
+          <Input placeholder="City keyword index (e.g. Miami)..." value={filterCity} onChange={(e) => { setFilterName(""); setFilterCity(e.target.value); setCurrentPage(0); }} className="rounded-xl bg-background border-border/50 text-sm" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-bold text-muted-foreground uppercase flex items-center gap-1"><Filter className="w-3 h-3 text-chart-3" /> Status Group</Label>
+          <Select value={filterStatus} onValueChange={(val) => { setFilterStatus(val); setCurrentPage(0); }}>
+            <SelectTrigger className="rounded-xl bg-background border-border/50 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Operational States</SelectItem>
+              <SelectItem value="ACTIVE">Active Channels Only</SelectItem>
+              <SelectItem value="INACTIVE">Deactivated Branches</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -181,44 +190,44 @@ export default function HotelsPage() {
         <div className="p-4 text-sm text-destructive bg-destructive/10 rounded-xl border border-destructive/20 flex-1">{error}</div>
       ) : (
         <div className="flex-1 flex flex-col justify-between space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {hotels.map((hotel) => (
-              <Card key={hotel.id} className="overflow-hidden border border-border bg-card shadow-sm hover:shadow-xl transition-all duration-300 rounded-2xl flex flex-col justify-between group">
-                <div className="relative w-full h-48 bg-muted overflow-hidden">
+              <Card key={hotel.id} className="overflow-hidden border border-border bg-card shadow-sm hover:shadow-md transition-all rounded-2xl flex flex-col justify-between group">
+                <div className="relative w-full h-44 bg-muted">
                   {hotel.imageUrl ? (
                     <img src={hotel.imageUrl} alt={hotel.name} className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500" />
                   ) : (
                     <div className="flex items-center justify-center w-full h-full text-muted-foreground/30"><ImageIcon className="w-10 h-10" /></div>
                   )}
-                  <span className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-black shadow-lg tracking-wide ${
-                      hotel.status === 'ACTIVE' ? 'bg-emerald-500/90 text-white backdrop-blur-sm' : 'bg-destructive/90 text-white backdrop-blur-sm'
+                  <span className={`absolute top-4 right-4 px-3 py-1 rounded-xl text-xs font-black shadow-sm tracking-wide ${
+                      hotel.status === 'ACTIVE' ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-destructive/10 text-destructive border border-destructive/20'
                   }`}>
                     {hotel.status}
                   </span>
                 </div>
                 
-                <CardHeader className="pb-2 relative z-10 bg-card">
+                <CardHeader className="pb-2">
                   <div className="flex items-start justify-between">
                     <div>
                       <CardTitle className="text-xl font-black truncate max-w-[200px]">{hotel.name}</CardTitle>
                       <div className="flex items-center mt-1.5 space-x-0.5 text-yellow-500">
-                        {Array.from({ length: Number(hotel.stars) || 0 }).map((_, i) => <Star key={i} className="w-4 h-4 fill-current" />)}
+                        {Array.from({ length: Number(hotel.stars) || 0 }).map((_, i) => <Star key={i} className="w-3.5 h-3.5 fill-current" />)}
                       </div>
                     </div>
                     {user?.role === 'ADMIN' && (
                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0 rounded-xl"><MoreVertical className="h-5 w-5 text-muted-foreground" /></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl border border-border bg-card shadow-xl">
-                          <DropdownMenuLabel className="font-black">Actions Scope</DropdownMenuLabel>
+                        <DropdownMenuTrigger asChild><Button variant="ghost" className="h-8 w-8 p-0 rounded-xl"><MoreVertical className="h-4 w-4 text-muted-foreground" /></Button></DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl border border-border bg-card">
+                          <DropdownMenuLabel>Actions Scope</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => { setHotelToEdit(hotel); setIsEditModalOpen(true); }} className="rounded-lg font-medium cursor-pointer"><Edit className="mr-2 h-4 w-4 text-primary" /> Edit Parameters</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleStatus(hotel.id, hotel.status)} className={`rounded-lg font-bold cursor-pointer ${hotel.status === 'ACTIVE' ? "text-destructive" : "text-emerald-500"}`}><Power className="mr-2 h-4 w-4" /> {hotel.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => { setHotelToEdit(hotel); setIsEditModalOpen(true); }} className="rounded-lg"><Edit className="mr-2 h-4 w-4" /> Edit Parameters</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleStatus(hotel.id, hotel.status)} className={`rounded-lg font-bold ${hotel.status === 'ACTIVE' ? "text-destructive" : "text-green-500"}`}><Power className="mr-2 h-4 w-4" /> {hotel.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
                   </div>
                 </CardHeader>
-                <CardContent className="mt-2 p-6 pt-0 bg-card">
+                <CardContent className="mt-4 pt-0 border-t border-border/40 p-6">
                   <div className="flex items-start gap-2 text-sm text-muted-foreground font-medium">
                     <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
                     <span className="line-clamp-2">{hotel.address}, <span className="font-bold text-foreground">{hotel.city}</span></span>
@@ -226,17 +235,17 @@ export default function HotelsPage() {
                 </CardContent>
               </Card>
             ))}
-            {hotels.length === 0 && <p className="py-16 text-center border-2 border-dashed rounded-2xl col-span-full font-bold text-muted-foreground bg-card border-border/50">No hotel branch configurations found matching criteria.</p>}
+            {hotels.length === 0 && <p className="py-16 text-center border border-dashed rounded-2xl col-span-full font-bold text-muted-foreground bg-card border-border">No hotel branch configurations found matching criteria.</p>}
           </div>
 
           {/* PAGINATION FOOTER */}
-          <div className="flex items-center justify-between px-6 py-4 bg-card border rounded-2xl shadow-sm border-border mt-auto">
+          <div className="flex items-center justify-between px-6 py-4 bg-card border rounded-xl shadow-sm border-border mt-auto">
             <span className="text-sm text-muted-foreground font-medium">
-              Showing page <span className="font-black text-foreground">{currentPage + 1}</span> of <span className="font-black text-foreground">{totalPages}</span> ({totalElements} matched entries)
+              Showing page <span className="font-bold text-foreground">{currentPage + 1}</span> of <span className="font-bold text-foreground">{totalPages}</span> ({totalElements} matched entries)
             </span>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="rounded-xl font-bold border-border hover:bg-accent"><ChevronLeft className="w-4 h-4 mr-1" /> Prev</Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1} className="rounded-xl font-bold border-border hover:bg-accent">Next <ChevronRight className="w-4 h-4 ml-1" /></Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0} className="rounded-xl font-bold"><ChevronLeft className="w-4 h-4" /> Previous</Button>
+              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage >= totalPages - 1} className="rounded-xl font-bold">Next <ChevronRight className="w-4 h-4" /></Button>
             </div>
           </div>
         </div>
