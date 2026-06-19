@@ -65,7 +65,7 @@ export default function HotelsPage() {
         imageUrl: formData.get("imageUrl") || null,
       };
 
-      await api.post("/v1/api/hotels", newHotelData);
+      await api.post("/hotels", newHotelData);
       setIsCreateModalOpen(false);
       fetchHotels(); 
     } catch (err: any) {
@@ -92,7 +92,7 @@ export default function HotelsPage() {
       };
 
       // Mandamos la petición a Java adjuntando el ID en la URL
-      await api.put(`/v1/api/hotels/${hotelToEdit.id}`, updatedData);
+      await api.put(`/hotels/${hotelToEdit.id}`, updatedData);
       
       setIsEditModalOpen(false);
       setHotelToEdit(null); // Limpiamos la memoria
@@ -109,7 +109,7 @@ export default function HotelsPage() {
   const handleToggleStatus = async (hotelId: number, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      await api.put(`/v1/api/hotels/${hotelId}/status`, { status: newStatus });
+      await api.put(`/hotels/${hotelId}/status`, { status: newStatus });
       fetchHotels();
     } catch (err: any) {
       console.error("Error al cambiar estado:", err);
