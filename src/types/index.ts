@@ -58,15 +58,16 @@ export interface Hotel{
     imageUrl: string | null;
 }
 
+// Add this interface to your existing types
 export interface Room {
     id: number;
-    hotelId: number;
-    hotelName:string;
     roomNumber: string;
-    roomType: RoomType;
     capacity: number;
     pricePerNight: number;
-    roomStatus: RoomStatus;
+    roomType: 'SINGLE' | 'DOUBLE' | 'MATRIMONIAL' | 'SUITE' | 'PRESIDENTIAL';
+    roomStatus: 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'OUT_OF_SERVICE';
+    hotelId: number;
+    hotelName: string; // The backend conveniently provides this!
 }
 
 

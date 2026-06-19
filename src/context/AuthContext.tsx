@@ -55,8 +55,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Action to save the user when they successfully log in
     const login = (token: string, userData: User) => {
+        // 1. Persist in LocalStorage for client-side state and Axios instance
         localStorage.setItem('token', token);
         localStorage.setItem('user', JSON.stringify(userData));
+        
+        // 2. Persist in a secure cookie for server-side Middleware validation (1-day expiration)
+        document.cookie = `token=${token}; path=/; max-age=86400; SameSite=Strict`;
+        
         setUser(userData);
     };
 
@@ -64,6 +69,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        
+        // Clear the session cookie by forcing expiration
+        document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Strict";
+        
         setUser(null);
     };
 
