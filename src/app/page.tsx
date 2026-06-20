@@ -15,7 +15,7 @@ import { Hotel } from "@/types";
 import { useAuth } from "@/context/AuthContext";
 
 import { Button } from "@/components/ui/button";
-import { MapPin, Star, ArrowRight, User as UserIcon, Sun, Moon, Sparkles } from "lucide-react";
+import { MapPin, Star, ArrowRight, User as UserIcon, Sun, Moon } from "lucide-react";
 
 export default function PublicHomePage() {
   // Global Auth Context Injection
@@ -49,14 +49,16 @@ export default function PublicHomePage() {
       {/* 1. GLASSMORPHISM NAVBAR (Boutique Style) */}
       <header className="fixed top-0 z-50 w-full border-b border-border/20 bg-background/50 backdrop-blur-md transition-all duration-300 shadow-sm">
         <div className="container mx-auto px-6 h-20 flex items-center justify-between">
-          <div className="flex items-center gap-3 cursor-pointer group">
-            <div className="w-8 h-8 bg-foreground rounded-md flex items-center justify-center group-hover:bg-primary transition-colors">
-              <Sparkles className="w-4 h-4 text-background" />
+          
+          {/* 🚀 BRAND LOGO (Restaurado: Las Palmeras Doradas) */}
+          <Link href="/" className="flex items-center gap-3 cursor-pointer group">
+            <div className="w-10 h-10 flex items-center justify-center shrink-0 filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)]">
+              <img src="/logo.png" alt="Oasis" className="w-full h-full object-contain" />
             </div>
-            <span className="text-xl font-black tracking-tighter uppercase group-hover:text-primary transition-colors">
+            <span className="text-xl font-serif font-black tracking-[0.2em] uppercase text-[#D4AF37]">
               Oasis
             </span>
-          </div>
+          </Link>
           
           <div className="flex items-center gap-6">
             {/* THEME TOGGLE SWITCH */}
@@ -77,17 +79,17 @@ export default function PublicHomePage() {
                       <UserIcon className="w-4 h-4" /> Workspace
                     </Button>
                   </Link>
-                  <Button variant="ghost" onClick={logout} className="text-muted-foreground hover:text-destructive rounded-md transition-all">
+                  <Button variant="ghost" onClick={logout} className="text-muted-foreground hover:text-destructive rounded-md transition-all font-bold">
                     Sign Out
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
                   <Link href="/login">
-                    <Button variant="ghost" className="rounded-md font-semibold hidden md:inline-flex hover:bg-accent/50 transition-all">Log In</Button>
+                    <Button variant="ghost" className="rounded-md font-bold hidden md:inline-flex hover:bg-accent/50 transition-all">Log In</Button>
                   </Link>
                   <Link href="/login">
-                    <Button className="bg-foreground hover:bg-foreground/90 text-background font-bold rounded-md px-8 shadow-xl hover:-translate-y-0.5 transition-all">
+                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-md px-8 shadow-xl hover:-translate-y-0.5 transition-all">
                       Discover
                     </Button>
                   </Link>
@@ -114,8 +116,8 @@ export default function PublicHomePage() {
           <p className="text-sm md:text-base font-bold tracking-[0.3em] uppercase text-white/80 mb-6 drop-shadow-md animate-in slide-in-from-bottom-4 duration-700">
             A Piece of Paradise
           </p>
-          <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-black tracking-tighter text-white leading-[0.9] drop-shadow-2xl animate-in slide-in-from-bottom-6 duration-1000">
-            REDEFINE <br className="hidden md:block"/> LUXURY.
+          <h1 className="text-5xl md:text-7xl lg:text-[8rem] font-serif font-black tracking-widest text-[#D4AF37] leading-[0.9] drop-shadow-2xl animate-in slide-in-from-bottom-6 duration-1000 uppercase">
+            Oasis.
           </h1>
           <p className="mt-8 text-lg md:text-2xl text-white/90 max-w-2xl font-medium drop-shadow-lg animate-in slide-in-from-bottom-8 duration-1000 delay-150">
             Escape the ordinary. Experience world-class hospitality in the most breathtaking destinations on Earth.
@@ -134,11 +136,11 @@ export default function PublicHomePage() {
         <div className="container mx-auto px-6 max-w-screen-2xl">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
             <div className="max-w-xl">
-              <h2 className="text-4xl md:text-5xl font-black tracking-tighter">Curated Retreats.</h2>
-              <p className="text-muted-foreground mt-4 text-lg">Our exclusive portfolio of premium properties, handpicked for you.</p>
+              <h2 className="text-4xl md:text-5xl font-serif font-black tracking-tight text-foreground">Curated Retreats.</h2>
+              <p className="text-muted-foreground mt-4 text-lg font-medium">Our exclusive portfolio of premium properties, handpicked for you.</p>
             </div>
             <Link href="/login">
-              <Button variant="ghost" className="rounded-md font-bold group cursor-pointer hover:bg-accent/50 transition-all">
+              <Button variant="ghost" className="rounded-md font-bold group cursor-pointer hover:bg-accent/50 transition-all text-sm uppercase tracking-wider">
                 Explore Collection <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
@@ -151,10 +153,13 @@ export default function PublicHomePage() {
               ))}
             </div>
           ) : featuredHotels.length === 0 ? (
-            <div className="text-center py-32 bg-accent/20 backdrop-blur-md rounded-md border border-border/50 shadow-sm">
-              <Sparkles className="w-12 h-12 text-muted-foreground/40 mx-auto mb-6" />
+            <div className="text-center py-32 bg-card/20 backdrop-blur-md rounded-md border border-border/50 shadow-sm">
+              <div className="w-12 h-12 flex items-center justify-center mx-auto mb-6 opacity-40">
+                {/* Logo restaurado en estado vacío */}
+                <img src="/logo.png" alt="Oasis" className="w-full h-full object-contain" />
+              </div>
               <h3 className="text-2xl font-black tracking-tight">The Vault is Empty</h3>
-              <p className="text-muted-foreground mt-2">Our curators are currently preparing the next collection.</p>
+              <p className="text-muted-foreground mt-2 font-medium">Our curators are currently preparing the next collection.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-12">
@@ -176,12 +181,12 @@ export default function PublicHomePage() {
                             className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 ease-out" 
                         />
                         ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground/30">
+                        <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground/30 font-bold">
                             No Image Available
                         </div>
                         )}
                         <div className="absolute top-4 right-4 bg-background/60 backdrop-blur-md px-3 py-1.5 rounded-md border border-border/30 flex items-center gap-1.5 shadow-sm">
-                            <Star className="w-3.5 h-3.5 text-foreground fill-foreground" />
+                            <Star className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]" />
                             <span className="text-xs font-black tracking-wider">{hotel.stars}.0</span>
                         </div>
                     </div>
@@ -190,11 +195,11 @@ export default function PublicHomePage() {
                     <div className="flex-1 p-6 flex flex-col justify-between bg-gradient-to-t from-background/80 to-transparent backdrop-blur-sm">
                         <div className="space-y-1">
                             <h3 className="text-2xl font-black tracking-tight group-hover:text-primary transition-colors line-clamp-1">{hotel.name}</h3>
-                            <p className="text-muted-foreground flex items-center gap-1.5 font-medium uppercase text-xs tracking-widest mt-2">
+                            <p className="text-muted-foreground flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-widest mt-2">
                                 <MapPin className="w-3.5 h-3.5 text-primary" /> {hotel.city}
                             </p>
                         </div>
-                        <div className="flex items-center text-sm font-bold text-primary group-hover:translate-x-1 transition-transform">
+                        <div className="flex items-center text-xs font-black uppercase tracking-wider text-primary group-hover:translate-x-1 transition-transform">
                             View Availability &rarr;
                         </div>
                     </div>
@@ -208,13 +213,16 @@ export default function PublicHomePage() {
       </section>
 
       {/* 4. MINIMALIST FOOTER */}
-      <footer className="bg-background border-t border-border/50 py-20 mt-auto">
+      <footer className="bg-background border-t border-border/40 py-16 mt-auto">
         <div className="container mx-auto px-6 text-center flex flex-col items-center">
-          <div className="w-12 h-12 bg-foreground text-background rounded-md flex items-center justify-center mb-6 shadow-xl">
-            <Sparkles className="w-5 h-5" />
+          
+          {/* 🚀 BRAND LOGO EN EL FOOTER */}
+          <div className="w-10 h-10 flex items-center justify-center mb-6 filter drop-shadow-[0_2px_6px_rgba(212,175,55,0.2)]">
+            <img src="/logo.png" alt="Oasis" className="w-full h-full object-contain" />
           </div>
-          <h2 className="text-3xl font-black tracking-tighter uppercase mb-6">Oasis.</h2>
-          <p className="text-muted-foreground text-sm font-medium tracking-wide">
+          
+          <h2 className="text-2xl font-serif font-black tracking-widest uppercase mb-4 text-[#D4AF37]">Oasis.</h2>
+          <p className="text-muted-foreground text-xs font-bold tracking-widest uppercase">
             © {new Date().getFullYear()} OASIS HOSPITALITY GROUP. ALL RIGHTS RESERVED.
           </p>
         </div>

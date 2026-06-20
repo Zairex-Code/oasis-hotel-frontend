@@ -52,7 +52,9 @@ export default function HotelsPage() {
    * Dynamically switches between base endpoints and search endpoints.
    */
   const fetchHotels = async (pageToFetch: number = 0) => {
+
     try {
+
       setIsLoading(true); setError(null);
       let endpoint = `/hotels?page=${pageToFetch}`;
       if (filterName.trim() !== "") endpoint = `/hotels/search/name?name=${encodeURIComponent(filterName)}&page=${pageToFetch}`;
