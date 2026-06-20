@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { LayoutDashboard, Building2, Users, LogOut, Bed, Calendar, Sparkles } from "lucide-react";
+import { LayoutDashboard, Building2, Users, LogOut, Bed, Calendar } from "lucide-react";
 
 export function Sidebar() {
     const pathname = usePathname(); 
@@ -20,44 +20,43 @@ export function Sidebar() {
     const authorizedNavItems = navItems.filter(item => user && item.allowedRoles.includes(user.role));
 
     return (
-        /* 🚀 HOVER EXPANSION ENGINE: Base width is w-20 (Icons only). On hover, it expands smoothly to w-64 */
-        <div className="flex flex-col w-20 hover:w-64 h-screen px-4 py-8 bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out group z-30 shrink-0 select-none">
+        <div className="flex flex-col w-20 hover:w-64 h-screen px-4 py-8 bg-sidebar border-r border-sidebar-border/60 transition-all duration-300 ease-in-out group z-30 shrink-0 select-none backdrop-blur-md">
             
-            {/* BRAND HEADER */}
+            {/* BRAND HEADER (CON TU NUEVO LOGO DE PALMERAS) */}
             <div className="flex items-center gap-3 px-2 mb-2 overflow-hidden whitespace-nowrap">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground p-2 rounded-xl shrink-0">
-                    <Sparkles className="w-4 h-4" />
+                <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                    {/* Renderiza tu isotipo dorado desde public/logo.png */}
+                    <img src="/logo.png" alt="Oasis" className="w-full h-full object-contain filter drop-shadow-[0_2px_8px_rgba(212,175,55,0.3)]" />
                 </div>
-                {/* 🚀 group-hover:opacity-100 makes text fade in beautifully when sidebar expands */}
-                <h2 className="text-xl font-black tracking-tighter text-sidebar-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-in">
+                {/* Tipografía Serif de Lujo y Color Dorado Premium */}
+                <h2 className="text-xl font-serif font-black tracking-widest text-[#D4AF37] opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-in uppercase">
                     Oasis
                 </h2>
             </div>
             
-            {/* DYNAMIC ROLE BADGE */}
+            {/* ROLE BADGE */}
             <div className="h-4 mb-8 px-2 overflow-hidden whitespace-nowrap">
-                <p className="text-[10px] font-black text-sidebar-primary uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <p className="text-[10px] font-black text-primary/80 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                     {user?.role || "Workspace"}
                 </p>
             </div>
 
-            {/* NAVIGATION LINKS */}
-            <nav className="flex flex-col flex-1 space-y-2">
+            {/* NAVIGATION LINKS (BURBUJA CORREGIDA PARA LIGHT Y DARK MODE) */}
+            <nav className="flex flex-col flex-1 space-y-1.5">
                 {authorizedNavItems.map((item) => {
                     const isActive = pathname === item.href;
                     return (
                         <Link
                             key={item.name}
                             href={item.href}
-                            className={`flex items-center h-12 px-3 rounded-xl font-bold transition-all duration-200 overflow-hidden whitespace-nowrap ${
+                            className={`flex items-center h-11 px-3 rounded-md font-bold transition-all duration-200 overflow-hidden whitespace-nowrap group/item border ${
                                 isActive
-                                ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-sidebar-primary/10" 
-                                : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                                ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20 dark:shadow-none dark:ring-1 dark:ring-white/20" 
+                                : "text-sidebar-foreground/70 border-transparent hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground dark:hover:bg-white/10 dark:hover:text-white"
                             }`}
                         >
-                            <item.icon className="w-5 h-5 shrink-0" />
-                            {/* Text labels fade out when sidebar is collapsed */}
-                            <span className="ml-4 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <item.icon className={`w-5 h-5 shrink-0 transition-transform duration-200 group-hover/item:scale-105 ${isActive ? "text-primary-foreground" : "text-muted-foreground group-hover/item:text-foreground"}`} />
+                            <span className="ml-4 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                 {item.name}
                             </span>
                         </Link>
@@ -66,10 +65,10 @@ export function Sidebar() {
             </nav>
 
             {/* LOGOUT ACTION */}
-            <div className="pt-4 border-t border-sidebar-border overflow-hidden whitespace-nowrap">
+            <div className="pt-4 border-t border-sidebar-border/60 overflow-hidden whitespace-nowrap">
                 <button
                     onClick={logout}
-                    className="flex items-center h-12 w-full px-3 text-destructive transition-colors rounded-xl hover:bg-destructive/10"
+                    className="flex items-center h-11 w-full px-3 text-destructive transition-all duration-200 rounded-md hover:bg-destructive/10 cursor-pointer font-bold"
                 >
                     <LogOut className="w-5 h-5 shrink-0" />
                     <span className="ml-4 text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity duration-200">

@@ -14,7 +14,15 @@ api.interceptors.request.use(
 
         if (token && token !== 'undefined' && token !== 'null') {
             const cleanToken = token.replace(/"/g, ''); 
-            config.headers.Authorization = `Bearer ${cleanToken}`;
+            
+            // 🚀 BUG FIX EN NEXT.JS: Inyección de cabeceras compatible con Axios headers internos
+            if (config.headers) {
+                if (typeof config.headers.set === 'function') {
+                    config.headers.set('Authorization', `Bearer ${cleanToken}`);
+                } else {
+                    config.headers['Authorization'] = `Bearer ${cleanToken}`;
+                }
+            }
         }
 
         return config;
