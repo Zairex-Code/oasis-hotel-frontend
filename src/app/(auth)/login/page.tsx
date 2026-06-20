@@ -1,3 +1,10 @@
+/**
+ * @file page.tsx (Login)
+ * @description Enterprise authentication gateway.
+ * Implements a Glassmorphism UI, handles credentials mapping against the Spring Boot auth endpoint,
+ * and controls synchronization between React Context, LocalStorage, and Next.js Middleware.
+ */
+
 "use client";
 
 import { useState } from "react";
@@ -19,31 +26,37 @@ export default function LoginPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Orchestrates the authentication lifecycle.
+   * @param e FormEvent to prevent default browser reload.
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // Petición hacia tu controlador de Spring Boot
+      // 1. Dispatch authentication payload to Spring Boot backend
       const response = await api.post("/auth/login", { email, password });
       
-      // 🚀 BUG FIX DEFINITIVO: Extraemos 'jwt' (el campo real de tu backend) con fallbacks de seguridad
+      // 2. JWT MAPPING FAULT-TOLERANCE: Extracts token resolving potential backend DTO variations (jwt vs token)
       const token = response.data?.jwt || response.data?.token || response.data?.accessToken;
       const user = response.data?.user;
 
       if (!token) {
-        throw new Error("Security signature (JWT) not found in response body.");
+        throw new Error("Security signature (JWT) missing in backend response payload.");
       }
       
-      // Guardamos la sesión en LocalStorage y Cookies
+      // 3. Persist session state across Context, LocalStorage, and HTTP Cookies
       login(token, user);
       setIsSuccess(true);
       
-      // Forzamos recarga limpia para sincronizar Axios headers
+      // 4. RACE-CONDITION PREVENTION: Instead of soft-routing via next/router, 
+      // we force a hard window reload. This ensures the Next.js Middleware and Axios
+      // interceptors natively capture the newly injected HTTP Cookies before fetching protected data.
       setTimeout(() => {
         if (user.role === "ADMIN" || user.role === "HOTEL_MANAGER") {
-            window.location.href = "/admin";
+            window.location.href = "/admin/hotels";
         } else {
             window.location.href = "/dashboard";
         }
