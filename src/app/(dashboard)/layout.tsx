@@ -1,3 +1,13 @@
+/**
+ * @file layout.tsx
+ * @description Master dashboard structural layout.
+ * Integrates the hover-expandable Sidebar, a floating Glassmorphism Topbar, and the global theme toggle.
+ * Operates as a secondary Client-Side Security Guard wrapping all internal routes.
+ */
+
+"use client";
+
+
 "use client";
 
 import { useEffect } from "react";
