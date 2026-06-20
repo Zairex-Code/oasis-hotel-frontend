@@ -25,28 +25,37 @@ export default function LoginPage() {
     setError(null);
 
     try {
+      // Petición hacia tu controlador de Spring Boot
       const response = await api.post("/auth/login", { email, password });
-      const { token, user } = response.data;
       
-      // 1. Guardamos el contexto de sesión
+      // 🚀 BUG FIX DEFINITIVO: Extraemos 'jwt' (el campo real de tu backend) con fallbacks de seguridad
+      const token = response.data?.jwt || response.data?.token || response.data?.accessToken;
+      const user = response.data?.user;
+
+      if (!token) {
+        throw new Error("Security signature (JWT) not found in response body.");
+      }
+      
+      // Guardamos la sesión en LocalStorage y Cookies
       login(token, user);
       setIsSuccess(true);
       
-      // 2. 🚀 BUG FIX: Usamos window.location.href para forzar recarga de estado de Axios y Middleware
+      // Forzamos recarga limpia para sincronizar Axios headers
       setTimeout(() => {
         if (user.role === "ADMIN" || user.role === "HOTEL_MANAGER") {
             window.location.href = "/admin";
         } else {
             window.location.href = "/dashboard";
         }
-      }, 500); // Pequeño delay para UX de éxito
+      }, 400);
 
     } catch (err: any) {
       setIsLoading(false);
+      console.error("Authentication mapping fault:", err);
       if (err.response?.status === 401) {
         setError("Invalid credentials. Please verify your email and password.");
       } else {
-        setError("Secure connection failed. Please try again later.");
+        setError(err.message || "Secure connection failed. Please try again later.");
       }
     }
   };
@@ -68,50 +77,49 @@ export default function LoginPage() {
       {/* FLOATING GLASSMORPHISM AUTH CARD */}
       <div className="relative z-10 w-full max-w-[420px] p-6 animate-in fade-in zoom-in-95 duration-700">
         
-        {/* 🚀 Brand Header (AHORA CON TU LOGO) */}
-        <div className="flex flex-col items-center mb-8 space-y-4">
-            <div className="w-16 h-16 flex items-center justify-center">
-              {/* Aquí mandamos a llamar tu logo desde public/logo.png */}
-              <img src="/logo.png" alt="Oasis Logo" className="w-full h-full object-contain drop-shadow-lg" />
+        {/* Brand Header (Con tu Logo y tipografía fina de lujo) */}
+        <div className="flex flex-col items-center mb-8 space-y-3">
+            <div className="w-16 h-16 flex items-center justify-center filter drop-shadow-[0_4px_12px_rgba(212,175,55,0.4)]">
+              <img src="/logo.png" alt="Oasis Logo" className="w-full h-full object-contain" />
             </div>
             <div className="text-center">
-                <h1 className="text-3xl font-serif font-black tracking-widest uppercase mb-1 text-primary">Oasis.</h1>
-                <p className="text-sm font-bold tracking-widest uppercase text-muted-foreground">Network Identity</p>
+                <h1 className="text-3xl font-serif font-black tracking-[0.2em] uppercase mb-1 text-[#D4AF37]">Oasis.</h1>
+                <p className="text-[10px] font-black tracking-widest uppercase text-muted-foreground">Network Identity Clearance</p>
             </div>
         </div>
 
         {/* The Card */}
-        <div className="bg-card/40 backdrop-blur-xl border border-border/50 rounded-md shadow-2xl overflow-hidden relative">
-          <div className="h-1 w-full bg-gradient-to-r from-primary via-chart-2 to-primary opacity-80"></div>
+        <div className="bg-card/40 backdrop-blur-xl border border-border/40 rounded-md shadow-2xl overflow-hidden relative">
+          <div className="h-1 w-full bg-gradient-to-r from-[#D4AF37] via-primary to-[#D4AF37] opacity-80"></div>
           
           <div className="p-8">
-            <h2 className="text-xl font-bold tracking-tight mb-6">Welcome Back</h2>
+            <h2 className="text-lg font-bold tracking-tight mb-6">System Authentication</h2>
 
             {error && (
-              <div className="mb-6 p-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-sm font-bold flex items-start gap-2">
+              <div className="mb-6 p-4 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs font-bold flex items-start gap-2 animate-in fade-in duration-200">
                 <span className="shrink-0 mt-0.5">⚠️</span>
                 <span>{error}</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-xs font-black uppercase tracking-wider text-muted-foreground">Mail Routing</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Mail Routing</Label>
                 <div className="relative group">
                     <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
                     <Input 
                         id="email" type="email" placeholder="operator@oasis.com" 
                         value={email} onChange={(e) => setEmail(e.target.value)} required
-                        className="pl-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-primary transition-all rounded-md shadow-inner text-sm font-medium"
+                        className="pl-10 h-11 bg-background/40 border-border/50 focus:bg-background/80 focus:border-primary transition-all rounded-md text-sm font-medium shadow-inner"
                     />
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                    <Label htmlFor="password" className="text-xs font-black uppercase tracking-wider text-muted-foreground">Secure Passphrase</Label>
-                    <Link href="#" className="text-[10px] font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-widest">
+                    <Label htmlFor="password" className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Secure Passphrase</Label>
+                    <Link href="#" className="text-[9px] font-bold text-primary hover:text-primary/80 transition-colors uppercase tracking-widest">
                         Reset Key?
                     </Link>
                 </div>
@@ -120,7 +128,7 @@ export default function LoginPage() {
                     <Input 
                         id="password" type="password" placeholder="••••••••" 
                         value={password} onChange={(e) => setPassword(e.target.value)} required
-                        className="pl-10 h-12 bg-background/50 border-border/50 focus:bg-background focus:border-primary transition-all rounded-md shadow-inner text-sm font-bold tracking-widest"
+                        className="pl-10 h-11 bg-background/40 border-border/50 focus:bg-background/80 focus:border-primary transition-all rounded-md text-sm font-bold tracking-widest"
                     />
                 </div>
               </div>
@@ -128,7 +136,7 @@ export default function LoginPage() {
               <Button 
                 type="submit" 
                 disabled={isLoading || isSuccess} 
-                className="w-full h-12 mt-4 rounded-md font-bold shadow-lg shadow-primary/20 hover:-translate-y-0.5 transition-all duration-300 group"
+                className="w-full h-11 mt-4 rounded-md font-bold bg-primary text-primary-foreground hover:bg-primary/90 shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 group cursor-pointer"
               >
                 {isLoading ? (
                   <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying Clearance... </>
