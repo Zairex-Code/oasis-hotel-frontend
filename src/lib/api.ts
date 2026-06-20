@@ -1,3 +1,10 @@
+/**
+ * @file api.ts
+ * @description Core Axios instance configuration and global network interceptors.
+ * Handles the automatic injection of Bearer tokens (JWT) and global 401 Unauthorized fallbacks.
+ * Designed to interact seamlessly with Spring Boot stateless microservices.
+ */
+
 import axios from 'axios';
 
 export const api = axios.create({
@@ -5,9 +12,11 @@ export const api = axios.create({
     timeout: 10000,
 });
 
-// ===========================================
-// 1. REQUEST INTERCEPTOR (Inbound Guard)
-// ===========================================
+/**
+ * 1. REQUEST INTERCEPTOR (Inbound Guard)
+ * Intercepts every outgoing request to inject the JWT token from the client's LocalStorage.
+ * Fixes Axios v1.x header serialization issues in Next.js Server/Client hybrid environments.
+ */
 api.interceptors.request.use(
     (config) => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -15,8 +24,8 @@ api.interceptors.request.use(
         if (token && token !== 'undefined' && token !== 'null') {
             const cleanToken = token.replace(/"/g, ''); 
             
-            // 🚀 BUG FIX EN NEXT.JS: Inyección de cabeceras compatible con Axios headers internos
             if (config.headers) {
+                // Compatible with AxiosHeaders standard object mutation
                 if (typeof config.headers.set === 'function') {
                     config.headers.set('Authorization', `Bearer ${cleanToken}`);
                 } else {
@@ -24,7 +33,6 @@ api.interceptors.request.use(
                 }
             }
         }
-
         return config;
     },
     (error) => {
@@ -32,29 +40,31 @@ api.interceptors.request.use(
     }
 );
 
-// ===========================================
-// 2. RESPONSE INTERCEPTOR (Outbound Guard)
-// ===========================================
+/**
+ * 2. RESPONSE INTERCEPTOR (Outbound Guard)
+ * Intercepts every incoming response from the backend.
+ * Specifically monitors for 401 Unauthorized errors (expired or corrupted tokens).
+ * If triggered, it instantly flushes the local session and forces a hard redirect to the login screen,
+ * preventing rendering crashes on protected routes.
+ */
 api.interceptors.response.use(
     (response) => {
         return response;
     },
     (error) => {
-        // Intercept global 401 Unauthorized errors (e.g., expired or corrupted tokens)
         if (error.response && error.response.status === 401) {
-            console.warn("⚠️ [AXIOS] Token expired or invalid. Automatic logout triggered...");
+            console.warn("⚠️ [AXIOS] Security Fault: Token expired or invalid. Triggering automatic logout sequence...");
             
             if (typeof window !== 'undefined') {
-                // Clear all client-side session mechanisms
+                // Hard-flush all client-side authentication mechanisms
                 localStorage.removeItem('token');
                 localStorage.removeItem('user');
                 document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Strict";
                 
-                // Redirect user to authentication screen
+                // Hard-redirect to prevent React Router race conditions
                 window.location.href = '/login?session_expired=true';
             }
         }
-
         return Promise.reject(error);
     }
 );
