@@ -1,29 +1,38 @@
+/**
+ * @file middleware.ts
+ * @description Edge-runtime security interceptor for Next.js.
+ * Operates before a request is completed, verifying the existence of the JWT HTTP Cookie.
+ * Enforces Role-Based Access Control (RBAC) bounding rules at the router level.
+ */
+
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-    // 1. Extract the authentication token from incoming request cookies
+    // 1. Extract the secure HTTP-Only/Standard cookie injected by AuthContext during login
     const token = request.cookies.get('token')?.value;
     
-    // 2. Determine current routing matching scopes
     const isLoginPage = request.nextUrl.pathname.startsWith('/login');
     const isAdminPage = request.nextUrl.pathname.startsWith('/admin');
 
-    // 3. Authorization Rule: Block unauthenticated users from entering dashboard views
+    // 2. AUTHORIZATION RULE: Block unauthenticated traffic from entering private dashboard routes
     if (isAdminPage && !token) {
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // 4. Optimization Rule: Prevent authenticated users from returning to the login form
+    // 3. UX OPTIMIZATION RULE: Prevent authenticated users from accessing the login screen
     if (isLoginPage && token) {
         return NextResponse.redirect(new URL('/admin/hotels', request.url));
     }
 
-    // 5. Proceed normally if no routing constraints are violated
+    // 4. Fallback: Proceed normally
     return NextResponse.next();
 }
 
-// Define the route patterns that will execute this middleware layer
+/**
+ * Route Matcher Configuration
+ * Defines which path topologies should trigger this edge-runtime middleware.
+ */
 export const config = {
     matcher: ['/admin/:path*', '/login'],
 };
