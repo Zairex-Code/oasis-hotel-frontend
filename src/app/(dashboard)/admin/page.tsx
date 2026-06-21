@@ -1,342 +1,158 @@
-/**
- * @file page.tsx (Identity & Clearance Management)
- * @description Role-Based Access Control (RBAC) administration panel.
- * Allows system administrators to provision, mutate, and inspect network identities.
- * Validates payload structures (including immutable email keys) against Spring Boot Security requirements.
- */
-
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import { User } from "@/types";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api";
+import { Reservation } from "@/types";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Plus, MoreHorizontal, Edit, ShieldAlert, ChevronLeft, ChevronRight, Users, Search, Filter } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Building2, Users as UsersIcon, Bed, CalendarCheck, Activity, TrendingUp, CreditCard, ArrowUpRight } from "lucide-react";
 
-export default function UsersPage() {
-  const { user: currentUser } = useAuth();
-  
-  // Core Data States
-  const [users, setUsers] = useState<User[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 
-  // Modal Controllers
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
-  const [selectedRole, setSelectedRole] = useState("CUSTOMER");
+const bookingTrendData = [
+  { month: "Jan", transactions: 120 }, { month: "Feb", transactions: 180 },
+  { month: "Mar", transactions: 240 }, { month: "Apr", transactions: 210 },
+  { month: "May", transactions: 350 }, { month: "Jun", transactions: 420 },
+  { month: "Jul", transactions: 510 },
+];
 
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [userToEdit, setUserToEdit] = useState<User | null>(null);
-  const [editRole, setEditRole] = useState<string>("CUSTOMER");
+const chartConfig = {
+  transactions: { label: "Reservations", color: "hsl(var(--primary))" },
+} satisfies ChartConfig;
 
-  // Filtering & Pagination Engines
-  const [filterName, setFilterName] = useState("");
-  const [filterRole, setFilterRole] = useState("ALL");
-  const [currentPage, setCurrentPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalElements, setTotalElements] = useState(0);
+export default function AdminDashboardPage() {
+    const { user, isLoading: authLoading } = useAuth();
+    const [metrics, setMetrics] = useState({ totalHotels: 0, totalRooms: 0, totalUsers: 0, totalReservations: 0 });
+    const [recentBookings, setRecentBookings] = useState<Reservation[]>([]);
+    const [isFetchingMetrics, setIsFetchingMetrics] = useState(true);
 
-  /**
-   * Fetches paginated identities from the database.
-   * Routes traffic to specialized search endpoints if filters are active.
-   */
-  const fetchUsers = async (pageToFetch: number = 0) => {
-    try {
-      setIsLoading(true);
-      let endpoint = `/users?page=${pageToFetch}`;
-      
-      if (filterName.trim() !== "") {
-        endpoint = `/users/search/name?name=${encodeURIComponent(filterName)}&page=${pageToFetch}`;
-      } else if (filterRole !== "ALL") {
-        endpoint = `/users/search/role?role=${filterRole}&page=${pageToFetch}`;
-      }
+    const fetchDashboardData = async () => {
+        try {
+            setIsFetchingMetrics(true);
+            const [hotelsRes, roomsRes, usersRes, reservationsRes, recentRes] = await Promise.all([
+                api.get("/hotels?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/rooms?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/users?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/reservations?size=1").catch(() => ({ data: { totalElements: 0 } })),
+                api.get("/reservations?size=5&sort=createdAt,desc").catch(() => ({ data: { content: [] } }))
+            ]);
 
-      const response = await api.get(endpoint); 
-      if (response.data?.content) {
-        setUsers(response.data.content); 
-        setTotalPages(response.data.totalPages || 1); 
-        setTotalElements(response.data.totalElements || response.data.content.length);
-      } else if (Array.isArray(response.data)) {
-        setUsers(response.data);
-      }
-    } catch (err) { 
-      setError("Could not load network identities."); 
-    } finally { 
-      setIsLoading(false); 
-    }
-  };
+            setMetrics({
+                totalHotels: hotelsRes.data?.totalElements || 0,
+                totalRooms: roomsRes.data?.totalElements || 0,
+                totalUsers: usersRes.data?.totalElements || 0,
+                totalReservations: reservationsRes.data?.totalElements || 0
+            });
+            setRecentBookings(recentRes.data?.content || []);
+        } catch (error) { console.error("Error", error); } finally { setIsFetchingMetrics(false); }
+    };
 
-  // Debounced Effect for Search Listeners
-  useEffect(() => { 
-    const timer = setTimeout(() => fetchUsers(currentPage), 300); 
-    return () => clearTimeout(timer);
-  }, [currentPage, filterName, filterRole]);
+    useEffect(() => { if (!authLoading && user) fetchDashboardData(); }, [authLoading, user]);
 
-  /**
-   * Dispatches a new user entity creation request to the Backend.
-   */
-  const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); 
-    setIsCreating(true); 
-    const formData = new FormData(e.currentTarget);
-    try {
-      await api.post("/users", { 
-        firstName: formData.get("firstName"), 
-        lastName: formData.get("lastName"), 
-        email: formData.get("email"), 
-        password: formData.get("password"), 
-        role: selectedRole 
-      });
-      setIsCreateModalOpen(false); 
-      fetchUsers(currentPage); 
-    } catch (err) { 
-      alert("Failed to inject user entity."); 
-    } finally { 
-      setIsCreating(false); 
-    }
-  };
+    if (authLoading) return null; 
 
-  /**
-   * Commits updates to an existing Identity Profile.
-   * Compiles all strict parameters to bypass Java Bean Validations (@NotNull).
-   */
-  const handleUpdateUser = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); 
-    if (!userToEdit) return; 
-    setIsUpdating(true); 
-    const formData = new FormData(e.currentTarget);
-    
-    try {
-      // Complete DTO Payload construction
-      const payload = {
-        firstName: formData.get("firstName"), 
-        lastName: formData.get("lastName"),
-        email: userToEdit.email, // Required by backend validation
-        role: currentUser?.role === 'ADMIN' ? editRole : userToEdit.role
-      };
-
-      await api.put(`/users/${userToEdit.id}`, payload);
-      
-      setIsEditModalOpen(false); 
-      setUserToEdit(null); 
-      fetchUsers(currentPage);
-    } catch (err: any) { 
-      console.error("Backend Validation Error:", err.response?.data || err);
-      alert(`Backend Error: ${err.response?.data?.message || err.response?.data?.error || 'Validation failed.'}`); 
-    } finally { 
-      setIsUpdating(false); 
-    }
-  };
-
-  /**
-   * Binds data from the selected row into the Modal Context.
-   */
-  const openEditModal = (user: User) => {
-    setUserToEdit(user);
-    setEditRole(user.role);
-    setIsEditModalOpen(true);
-  };
-
-  return (
-    <div className="p-8 space-y-6 flex flex-col min-h-[calc(100vh-4rem)] max-w-[1600px] mx-auto w-full animate-in fade-in duration-300">
-      
-      {/* HEADER SECTION */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between border-b border-border/50 pb-6 gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-3">
-            <Users className="w-8 h-8 text-primary" /> Network Identities
-          </h1>
-          <p className="text-muted-foreground font-medium text-sm mt-1">Manage global ecosystem access and role-based permissions.</p>
-        </div>
-        
-        <div className="flex items-center gap-3">
-            {currentUser?.role === 'ADMIN' && (
-            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-                <DialogTrigger asChild>
-                  <Button className="flex items-center gap-2 font-bold shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer h-10 px-5">
-                    <Plus className="w-4 h-4" /> Register Identity
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px] md:max-w-[500px] border-border/50 bg-card/95 backdrop-blur-xl p-8 shadow-2xl rounded-md ring-1 ring-black/10 dark:ring-white/10">
-                  <DialogHeader>
-                    <DialogTitle className="text-2xl font-black tracking-tight">Create Network Identity</DialogTitle>
-                    <DialogDescription className="text-sm mt-1 text-muted-foreground font-medium">Create a new profile bound to the RBAC engine.</DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleCreateUser} className="space-y-4 mt-6">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">First Name</Label><Input name="firstName" required className="bg-background/50 h-11 shadow-inner" /></div>
-                        <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Last Name</Label><Input name="lastName" required className="bg-background/50 h-11 shadow-inner" /></div>
-                      </div>
-                      <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Email Coordinate</Label><Input name="email" type="email" required className="bg-background/50 h-11 shadow-inner" /></div>
-                      <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Temporary Password</Label><Input name="password" type="password" required className="bg-background/50 h-11 shadow-inner" /></div>
-                      <div className="space-y-1.5">
-                        <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">System Role</Label>
-                        <Select value={selectedRole} onValueChange={setSelectedRole}>
-                            <SelectTrigger className="bg-background/50 border-border/50 h-11 cursor-pointer"><SelectValue /></SelectTrigger>
-                            <SelectContent className="border-border/50 bg-card/95 backdrop-blur-xl">
-                              <SelectItem value="CUSTOMER" className="cursor-pointer">Client (Customer)</SelectItem>
-                              <SelectItem value="HOTEL_MANAGER" className="cursor-pointer">Branch Manager</SelectItem>
-                              <SelectItem value="ADMIN" className="cursor-pointer">System Administrator</SelectItem>
-                            </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex justify-end gap-3 pt-4 border-t border-border/40 mt-8">
-                        <Button type="button" variant="ghost" className="rounded-md font-bold h-11 px-6 cursor-pointer" onClick={() => setIsCreateModalOpen(false)}>Cancel</Button>
-                        <Button type="submit" className="rounded-md font-bold cursor-pointer shadow-md hover:-translate-y-0.5 transition-transform h-11 px-8" disabled={isCreating}>{isCreating ? "Processing..." : "Generate Identity"}</Button>
-                      </div>
-                  </form>
-                </DialogContent>
-            </Dialog>
-            )}
-        </div>
-      </div>
-
-      {/* FILTER CONTROLS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-md bg-card/40 backdrop-blur-md border border-border/50 shadow-sm dark:shadow-none dark:ring-1 dark:ring-white/10">
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1.5 tracking-wider"><Search className="w-3.5 h-3.5 text-primary" /> Filter by Name</Label>
-          <Input placeholder="Search user by first or last name..." value={filterName} onChange={(e) => { setFilterRole("ALL"); setFilterName(e.target.value); setCurrentPage(0); }} className="bg-background/50 border-border/50 text-sm h-10 shadow-inner hover:border-primary/50 transition-colors" />
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-[10px] font-black text-muted-foreground uppercase flex items-center gap-1.5 tracking-wider"><Filter className="w-3.5 h-3.5 text-chart-2" /> Clearance Level</Label>
-          <Select value={filterRole} onValueChange={(val) => { setFilterName(""); setFilterRole(val); setCurrentPage(0); }}>
-            <SelectTrigger className="bg-background/50 border-border/50 text-sm h-10 cursor-pointer hover:border-primary/50 transition-colors"><SelectValue /></SelectTrigger>
-            <SelectContent className="border-border/50 bg-card/95 backdrop-blur-xl">
-              <SelectItem value="ALL" className="cursor-pointer">All Roles</SelectItem>
-              <SelectItem value="ADMIN" className="cursor-pointer">Administrators</SelectItem>
-              <SelectItem value="HOTEL_MANAGER" className="cursor-pointer">Branch Managers</SelectItem>
-              <SelectItem value="CUSTOMER" className="cursor-pointer">Customers</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* DATA GRID */}
-      {isLoading ? (
-        <div className="py-12 text-center text-muted-foreground animate-pulse font-bold flex-1">Syncing identities...</div>
-      ) : (
-        <div className="flex-1 flex flex-col justify-between space-y-6">
-          <div className="bg-card/40 backdrop-blur-md border border-border/50 rounded-md shadow-sm overflow-hidden dark:ring-1 dark:ring-white/10">
-            <table className="w-full text-sm text-left whitespace-nowrap">
-              <thead className="bg-muted/20 text-muted-foreground border-b border-border/50">
-                <tr>
-                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Entity Profile</th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Email Identity</th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px]">Security Clearance</th>
-                  <th className="px-6 py-4 font-bold uppercase tracking-wider text-[10px] text-right">Commands</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border/30">
-                {users.length === 0 ? (
-                  <tr><td colSpan={4} className="px-6 py-12 text-center font-medium text-muted-foreground">No identities match your search criteria.</td></tr>
-                ) : (
-                    users.map((userObj) => (
-                    <tr key={userObj.id} className="hover:bg-accent/20 hover:shadow-sm transition-all group">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center justify-center w-9 h-9 rounded-md bg-primary/10 text-primary font-black text-xs uppercase border border-primary/20 shadow-sm group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                              {userObj.firstName?.charAt(0)}{userObj.lastName?.charAt(0)}
-                            </div>
-                            <span className="font-bold text-foreground group-hover:text-primary transition-colors">{userObj.firstName} {userObj.lastName}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-muted-foreground font-medium">{userObj.email}</td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex px-3 py-1 rounded-md text-[9px] uppercase tracking-widest font-black border shadow-sm ${userObj.role === 'ADMIN' ? 'bg-chart-1/10 text-chart-1 border-chart-1/20' : userObj.role === 'HOTEL_MANAGER' ? 'bg-chart-2/10 text-chart-2 border-chart-2/20' : 'bg-muted/50 text-muted-foreground border-border/50'}`}>
-                              {userObj.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                        {currentUser?.role === 'ADMIN' && (
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-accent/50 hover:shadow-md transition-all cursor-pointer rounded-md">
-                                  <MoreHorizontal className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-card/95 backdrop-blur-xl border-border/50 shadow-xl p-1 rounded-md">
-                                  <DropdownMenuLabel className="font-bold text-[10px] uppercase tracking-widest text-muted-foreground">Scope Actions</DropdownMenuLabel>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem onClick={() => openEditModal(userObj)} className="font-medium cursor-pointer hover:bg-primary/10 transition-colors rounded-md">
-                                    <Edit className="mr-2 h-4 w-4 text-primary" /> Edit Profile Details
-                                  </DropdownMenuItem>
-                                  {userObj.role !== 'ADMIN' && (
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive cursor-pointer font-bold mt-1 hover:bg-destructive/10 transition-colors rounded-md">
-                                      <ShieldAlert className="mr-2 h-4 w-4" /> Suspend Access
-                                    </DropdownMenuItem>
-                                  )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                        )}
-                        </td>
-                    </tr>
-                    ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex items-center justify-between px-6 py-4 bg-card/40 backdrop-blur-md border rounded-md shadow-sm border-border/50 mt-auto dark:ring-1 dark:ring-white/10">
-            <span className="text-sm text-muted-foreground font-medium">Page <span className="font-bold text-foreground">{currentPage + 1}</span> of <span className="font-bold text-foreground">{totalPages}</span> ({totalElements} total objects)</span>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 0} className="font-bold hover:bg-accent/50 cursor-pointer"><ChevronLeft className="w-4 h-4 mr-1" /> Prev</Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage >= totalPages - 1} className="font-bold hover:bg-accent/50 cursor-pointer">Next <ChevronRight className="w-4 h-4 ml-1" /></Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 🚀 EDIT MODAL (REFACTORIZADO AL DISEÑO CORPORATIVO) */}
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[425px] md:max-w-[500px] border-border/50 bg-card/95 backdrop-blur-xl p-8 shadow-2xl rounded-md ring-1 ring-black/10 dark:ring-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-black tracking-tight">Edit Identity Profile</DialogTitle>
-            <DialogDescription className="text-sm mt-1 text-muted-foreground font-medium">Modify personal details or upgrade system clearance.</DialogDescription>
-          </DialogHeader>
-          
-          {userToEdit && (
-            <form onSubmit={handleUpdateUser} className="space-y-4 mt-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">First Name</Label><Input name="firstName" defaultValue={userToEdit.firstName} required className="bg-background/50 h-11 shadow-inner" /></div>
-                <div className="space-y-1.5"><Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Last Name</Label><Input name="lastName" defaultValue={userToEdit.lastName} required className="bg-background/50 h-11 shadow-inner" /></div>
-              </div>
-              <div className="space-y-1.5 opacity-60 cursor-not-allowed">
-                <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">Email Coordinate (Immutable)</Label>
-                <Input value={userToEdit.email} readOnly className="bg-background/50 h-11 shadow-inner border-dashed" title="Security locked coordinate" />
-              </div>
-              
-              {currentUser?.role === 'ADMIN' && currentUser.id !== userToEdit.id && (
-                <div className="space-y-1.5">
-                  <Label className="text-[10px] font-black uppercase tracking-wider text-muted-foreground">System Role Clearance</Label>
-                  <Select value={editRole} onValueChange={setEditRole}>
-                    <SelectTrigger className="bg-background/50 border-border/50 h-11 cursor-pointer shadow-inner"><SelectValue /></SelectTrigger>
-                    <SelectContent className="border-border/50 bg-card/95 backdrop-blur-xl">
-                      <SelectItem value="CUSTOMER" className="cursor-pointer">Client (Customer)</SelectItem>
-                      <SelectItem value="HOTEL_MANAGER" className="cursor-pointer">Branch Manager</SelectItem>
-                      <SelectItem value="ADMIN" className="cursor-pointer">System Administrator</SelectItem>
-                    </SelectContent>
-                  </Select>
+    return (
+        <div className="p-8 space-y-8 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+            <div className="flex items-end justify-between border-b border-border/50 pb-6">
+                <div className="space-y-1">
+                    <h1 className="text-3xl font-black tracking-tight flex items-center gap-3">
+                        <Activity className="w-7 h-7 text-primary" /> Overview
+                    </h1>
+                    <p className="text-muted-foreground font-medium text-sm">
+                        Welcome back, <span className="font-bold text-foreground">{user?.firstName}</span>. Here's what's happening today.
+                    </p>
                 </div>
-              )}
-              
-              <div className="flex justify-end gap-3 pt-4 border-t border-border/40 mt-8">
-                <Button type="button" variant="ghost" className="rounded-md font-bold h-11 px-6 cursor-pointer" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-                <Button type="submit" className="rounded-md font-bold cursor-pointer shadow-md hover:-translate-y-0.5 transition-transform h-11 px-8" disabled={isUpdating}>
-                  {isUpdating ? "Mutating identity..." : "Save Profile Updates"}
-                </Button>
-              </div>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { title: "Total Revenue", val: `$${(metrics.totalReservations * 250).toLocaleString()}`, icon: CreditCard, trend: "+20.1%", desc: "from last month" },
+                  { title: "Network Identities", val: metrics.totalUsers, icon: UsersIcon, trend: "+12.5%", desc: "new users acquired" },
+                  { title: "Active Branches", val: metrics.totalHotels, icon: Building2, trend: "Stable", desc: "operational state" },
+                  { title: "Global Bookings", val: metrics.totalReservations, icon: CalendarCheck, trend: "+8.2%", desc: "active ledgers" }
+                ].map((kpi, idx) => (
+                    <Card key={idx} className="border border-border/50 bg-card/40 backdrop-blur-md shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 dark:ring-1 dark:ring-white/10 cursor-default">
+                        <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+                            <CardTitle className="text-xs font-bold text-muted-foreground tracking-tight uppercase">{kpi.title}</CardTitle>
+                            <kpi.icon className="w-4 h-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-black tracking-tighter text-foreground">
+                                {isFetchingMetrics ? <span className="text-muted-foreground/30 animate-pulse">--</span> : kpi.val}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground font-bold mt-1.5 flex items-center gap-1 uppercase tracking-wider">
+                                <span className={kpi.trend.includes('+') ? 'text-emerald-500 font-black flex items-center' : 'text-primary font-black'}>
+                                    {kpi.trend.includes('+') && <ArrowUpRight className="w-3 h-3 mr-0.5" />} {kpi.trend}
+                                </span> 
+                                {kpi.desc}
+                            </p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+                <Card className="lg:col-span-4 border border-border/50 bg-card/40 backdrop-blur-md shadow-sm flex flex-col dark:ring-1 dark:ring-white/10">
+                    <CardHeader className="pb-0 mb-4">
+                        <CardTitle className="text-lg font-black tracking-tight">Booking Velocity</CardTitle>
+                        <CardDescription className="text-sm font-medium text-muted-foreground">Aggregate reservation volume over the last 7 months.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 p-0 pb-4">
+                        <div className="h-[350px] w-full mt-4 pr-6">
+                            <ChartContainer config={chartConfig} className="h-full w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={bookingTrendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="fillTransactions" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="var(--color-chart-1)" stopOpacity={0.4} />
+                                                <stop offset="95%" stopColor="var(--color-chart-1)" stopOpacity={0.0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-border/60" />
+                                        <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={12} className="text-xs font-bold fill-muted-foreground" />
+                                        <YAxis tickLine={false} axisLine={false} tickMargin={10} className="text-xs font-bold fill-muted-foreground" />
+                                        <ChartTooltip cursor={{ stroke: 'var(--color-border)', strokeWidth: 1, strokeDasharray: '4 4' }} content={<ChartTooltipContent indicator="line" className="bg-background/90 backdrop-blur-md border-border/50 shadow-xl rounded-md font-bold" />} />
+                                        <Area dataKey="transactions" type="monotone" fill="url(#fillTransactions)" fillOpacity={1} stroke="var(--color-chart-1)" strokeWidth={3} activeDot={{ r: 6, fill: "var(--color-background)", stroke: "var(--color-chart-1)", strokeWidth: 2 }} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </ChartContainer>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-3 border border-border/50 bg-card/40 backdrop-blur-md shadow-sm dark:ring-1 dark:ring-white/10">
+                    <CardHeader>
+                        <CardTitle className="text-lg font-black tracking-tight">Recent Sales</CardTitle>
+                        <CardDescription className="text-sm font-medium text-muted-foreground">Latest transactions processed by the network.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-6">
+                            {isFetchingMetrics ? (
+                                <div className="text-center text-muted-foreground text-sm font-bold animate-pulse py-10">Fetching live ledgers...</div>
+                            ) : recentBookings.length === 0 ? (
+                                <div className="text-center text-muted-foreground text-sm py-10">No recent activity detected.</div>
+                            ) : (
+                                recentBookings.map((res) => (
+                                    <div key={res.id} className="flex items-center group cursor-default hover:bg-accent/30 p-2 -mx-2 rounded-md transition-colors">
+                                        <div className="w-9 h-9 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-black text-xs uppercase shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                                            {res.userFirstName?.charAt(0)}{res.userLastName?.charAt(0)}
+                                        </div>
+                                        <div className="ml-4 space-y-1">
+                                            <p className="text-sm font-bold leading-none text-foreground">{res.userFirstName} {res.userLastName}</p>
+                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{res.userEmail}</p>
+                                        </div>
+                                        <div className="ml-auto font-black text-sm text-primary group-hover:scale-105 transition-transform">
+                                            +${res.totalPrice}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
+    );
 }
