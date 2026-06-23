@@ -75,16 +75,20 @@ A high-converting, immersive landing page fetching the top-rated branches direct
 
 ### 🔐 Secure Identity Access (Login)
 Handles JWT extraction, saves session context securely, and forces hard-redirects to bypass React race conditions.
+
+
 <img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 40 23" src="https://github.com/user-attachments/assets/29af0cfc-ac81-4ae9-8553-acb3ce003a5d" />
 
 
 ### 🏢 Ecosystem Branches (Hotels)
 Full CRUD operations utilizing controlled asynchronous forms. Includes live-toggling of branch operational status.
+
 <img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 41 54" src="https://github.com/user-attachments/assets/afbfc1df-1d19-4aea-8949-d0aa8bdf0f30" />
 
 
 ### 🛏️ Inventory Management (Rooms)
 Linked intrinsically to Hotel entities. Features our signature "Click-to-Book" modal with an async guest search engine.
+
 <img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 43 02" src="https://github.com/user-attachments/assets/eeb0af06-d6c1-4642-8b71-33340afb22a6" />
 
 
