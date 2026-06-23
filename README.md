@@ -1,4 +1,6 @@
-<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 41 54" src="https://github.com/user-attachments/assets/10691a16-d1e5-4004-94e4-aab75c608517" /><img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 41 54" src="https://github.com/user-attachments/assets/090c4757-5319-4867-a1f0-cb9bb15a71c5" /># 🌴 Oasis Hospitality Group - Enterprise Frontend
+# 🌴 Oasis Hospitality Group - Enterprise Frontend
+<img width="1890" height="956" alt="image" src="https://github.com/user-attachments/assets/043aae1f-c1ce-4d34-aa80-104865bffa99" />
+
 
 > A world-class, enterprise-grade Hotel Management Dashboard. Built for speed, security, and absolute visual elegance using Next.js, Tailwind CSS v4, and a custom Glassmorphism UI.
 
