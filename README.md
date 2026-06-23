@@ -1,9 +1,6 @@
-# 🌴 Oasis Hospitality Group - Enterprise Frontend
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 41 54" src="https://github.com/user-attachments/assets/10691a16-d1e5-4004-94e4-aab75c608517" /><img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 41 54" src="https://github.com/user-attachments/assets/090c4757-5319-4867-a1f0-cb9bb15a71c5" /># 🌴 Oasis Hospitality Group - Enterprise Frontend
 
 > A world-class, enterprise-grade Hotel Management Dashboard. Built for speed, security, and absolute visual elegance using Next.js, Tailwind CSS v4, and a custom Glassmorphism UI.
-
-<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 27 08" src="https://github.com/user-attachments/assets/6b246d88-0311-48fd-a40f-30584ce4e5f9" />
-
 
 Welcome to the **Oasis Hotel Frontend** repository! 👋 
 
@@ -71,17 +68,28 @@ Here is a quick tour of what the platform can do:
 ### 🏝️ Public Gateway (Landing Page)
 A high-converting, immersive landing page fetching the top-rated branches directly from the public backend APIs.
 
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 27 08" src="https://github.com/user-attachments/assets/bdc4f3a2-9871-4730-ad4b-f02f2d40e2e1" />
+
+
 ### 🔐 Secure Identity Access (Login)
 Handles JWT extraction, saves session context securely, and forces hard-redirects to bypass React race conditions.
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 40 23" src="https://github.com/user-attachments/assets/29af0cfc-ac81-4ae9-8553-acb3ce003a5d" />
+
 
 ### 🏢 Ecosystem Branches (Hotels)
 Full CRUD operations utilizing controlled asynchronous forms. Includes live-toggling of branch operational status.
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 41 54" src="https://github.com/user-attachments/assets/afbfc1df-1d19-4aea-8949-d0aa8bdf0f30" />
+
 
 ### 🛏️ Inventory Management (Rooms)
 Linked intrinsically to Hotel entities. Features our signature "Click-to-Book" modal with an async guest search engine.
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 43 02" src="https://github.com/user-attachments/assets/eeb0af06-d6c1-4642-8b71-33340afb22a6" />
+
 
 ### 📅 Global Ledger (Reservations)
 Track, audit, and mutate reservation lifecycles (Pending, Confirmed, Completed, Cancelled) across the entire network.
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 45 01" src="https://github.com/user-attachments/assets/f68fac8f-eb91-438a-b834-86fc51323299" />
+
 
 ## 🏗️ Architectural Highlights for Developers
 If you are a developer looking through the code, here are a few cool things we implemented:
