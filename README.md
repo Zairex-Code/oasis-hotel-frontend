@@ -2,7 +2,8 @@
 
 > A world-class, enterprise-grade Hotel Management Dashboard. Built for speed, security, and absolute visual elegance using Next.js, Tailwind CSS v4, and a custom Glassmorphism UI.
 
-![Oasis Hero](https://via.placeholder.com/1200x600?text=Insert+Hero+Screenshot+Here)
+<img width="400" height="202" alt="simplescreenrecorder-2026-06-22_23 27 08" src="https://github.com/user-attachments/assets/6b246d88-0311-48fd-a40f-30584ce4e5f9" />
+
 
 Welcome to the **Oasis Hotel Frontend** repository! 👋 
 
